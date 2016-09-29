@@ -33,7 +33,6 @@
 #include <poll.h>
 #include <errno.h>
 
-#include <error.h>
 #include <getopt.h>
 
 #include <sys/types.h>
@@ -119,6 +118,25 @@ struct weston_launch {
 };
 
 union cmsg_data { unsigned char b[4]; int fd; };
+
+static void
+error(int status, int errnum, const char *msg, ...)
+{
+	va_list args;
+
+	fputs("weston-launch: ", stderr);
+	va_start(args, msg);
+	vfprintf(stderr, msg, args);
+	va_end(args);
+
+	if (errnum)
+		fprintf(stderr, ": %s\n", strerror(errnum));
+	else
+		fputc('\n', stderr);
+
+	if (status)
+		exit(status);
+}
 
 static gid_t *
 read_groups(int *ngroups)
