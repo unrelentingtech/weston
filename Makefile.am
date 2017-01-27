@@ -177,7 +177,9 @@ nodist_libweston_@LIBWESTON_MAJOR@_la_SOURCES =				\
 	protocol/input-timestamps-unstable-v1-protocol.c		\
 	protocol/input-timestamps-unstable-v1-server-protocol.h		\
 	protocol/weston-touch-calibration-protocol.c			\
-	protocol/weston-touch-calibration-server-protocol.h
+	protocol/weston-touch-calibration-server-protocol.h		\
+	protocol/pointer-gestures-unstable-v1-protocol.c		\
+	protocol/pointer-gestures-unstable-v1-server-protocol.h
 
 BUILT_SOURCES += $(nodist_libweston_@LIBWESTON_MAJOR@_la_SOURCES)
 

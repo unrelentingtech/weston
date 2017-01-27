@@ -42,6 +42,7 @@
 #include "libinput-device.h"
 #include "shared/helpers.h"
 #include "shared/timespec-util.h"
+#include "pointer-gestures-unstable-v1-server-protocol.h"
 
 void
 evdev_led_update(struct evdev_device *device, enum weston_led weston_leds)
@@ -488,6 +489,122 @@ handle_touch_frame(struct libinput_device *libinput_device,
 	notify_touch_frame(device->touch_device);
 }
 
+static void
+handle_pointer_swipe_begin(struct libinput_device *libinput_device,
+			   struct libinput_event_gesture *gesture_event)
+{
+	struct evdev_device *device =
+		libinput_device_get_user_data(libinput_device);
+	struct weston_seat *seat = device->seat;
+	uint32_t time, fingers;
+
+	time = libinput_event_gesture_get_time(gesture_event);
+	fingers = libinput_event_gesture_get_finger_count(gesture_event);
+	notify_pointer_swipe(seat, time, 0, fingers, 0, 0,
+			     ZWP_POINTER_GESTURE_SWIPE_V1_BEGIN);
+}
+
+static void
+handle_pointer_swipe_update(struct libinput_device *libinput_device,
+			   struct libinput_event_gesture *gesture_event)
+{
+	struct evdev_device *device =
+		libinput_device_get_user_data(libinput_device);
+	struct weston_seat *seat = device->seat;
+	uint32_t time, fingers;
+	double dx, dy;
+
+	time = libinput_event_gesture_get_time(gesture_event);
+	fingers = libinput_event_gesture_get_finger_count(gesture_event);
+	dx = libinput_event_gesture_get_dx(gesture_event);
+	dy = libinput_event_gesture_get_dy(gesture_event);
+
+	notify_pointer_swipe(seat, time, 0, fingers,
+			     wl_fixed_from_double(dx),
+			     wl_fixed_from_double(dy),
+			     ZWP_POINTER_GESTURE_SWIPE_V1_UPDATE);
+}
+
+static void
+handle_pointer_swipe_end(struct libinput_device *libinput_device,
+			   struct libinput_event_gesture *gesture_event)
+{
+	struct evdev_device *device =
+		libinput_device_get_user_data(libinput_device);
+	struct weston_seat *seat = device->seat;
+	uint32_t time, fingers, cancelled;
+
+	time = libinput_event_gesture_get_time(gesture_event);
+	fingers = libinput_event_gesture_get_finger_count(gesture_event);
+	cancelled = libinput_event_gesture_get_cancelled(gesture_event);
+
+	notify_pointer_swipe(seat, time, cancelled, fingers, 0, 0,
+			     ZWP_POINTER_GESTURE_SWIPE_V1_END);
+}
+
+static void
+handle_pointer_pinch_begin(struct libinput_device *libinput_device,
+			   struct libinput_event_gesture *gesture_event)
+{
+	struct evdev_device *device =
+		libinput_device_get_user_data(libinput_device);
+	struct weston_seat *seat = device->seat;
+	uint32_t time, fingers;
+	double scale;
+
+	time = libinput_event_gesture_get_time(gesture_event);
+	fingers = libinput_event_gesture_get_finger_count(gesture_event);
+	scale = libinput_event_gesture_get_scale(gesture_event);
+
+	notify_pointer_pinch(seat, time, 0, fingers, 0, 0, scale, 0,
+			     ZWP_POINTER_GESTURE_PINCH_V1_BEGIN);
+}
+
+static void
+handle_pointer_pinch_update(struct libinput_device *libinput_device,
+			   struct libinput_event_gesture *gesture_event)
+{
+	struct evdev_device *device =
+		libinput_device_get_user_data(libinput_device);
+	struct weston_seat *seat = device->seat;
+	double scale, angle_delta, dx, dy;
+	uint32_t time, fingers;
+
+	time = libinput_event_gesture_get_time(gesture_event);
+	fingers = libinput_event_gesture_get_finger_count(gesture_event);
+	scale = libinput_event_gesture_get_scale(gesture_event);
+	angle_delta = libinput_event_gesture_get_angle_delta(gesture_event);
+	dx = libinput_event_gesture_get_dx(gesture_event);
+	dy = libinput_event_gesture_get_dy(gesture_event);
+
+	notify_pointer_pinch(seat, time, 0, fingers,
+			     wl_fixed_from_double(dx),
+			     wl_fixed_from_double(dy),
+			     wl_fixed_from_double(scale),
+			     wl_fixed_from_double(angle_delta),
+			     ZWP_POINTER_GESTURE_PINCH_V1_UPDATE);
+}
+
+static void
+handle_pointer_pinch_end(struct libinput_device *libinput_device,
+			 struct libinput_event_gesture *gesture_event)
+{
+	struct evdev_device *device =
+		libinput_device_get_user_data(libinput_device);
+	struct weston_seat *seat = device->seat;
+	uint32_t time, fingers, cancelled;
+	double scale;
+
+	time = libinput_event_gesture_get_time(gesture_event);
+	fingers = libinput_event_gesture_get_finger_count(gesture_event);
+	cancelled = libinput_event_gesture_get_cancelled(gesture_event);
+	scale = libinput_event_gesture_get_scale(gesture_event);
+
+	notify_pointer_pinch(seat, time, cancelled, fingers,
+			     0, 0, wl_fixed_from_double(scale), 0,
+			     ZWP_POINTER_GESTURE_PINCH_V1_END);
+}
+
 int
 evdev_device_process_event(struct libinput_event *event)
 {
@@ -536,6 +653,30 @@ evdev_device_process_event(struct libinput_event *event)
 	case LIBINPUT_EVENT_TOUCH_FRAME:
 		handle_touch_frame(libinput_device,
 				   libinput_event_get_touch_event(event));
+		break;
+	case LIBINPUT_EVENT_GESTURE_SWIPE_BEGIN:
+		handle_pointer_swipe_begin(libinput_device,
+					   libinput_event_get_gesture_event(event));
+		break;
+	case LIBINPUT_EVENT_GESTURE_SWIPE_UPDATE:
+		handle_pointer_swipe_update(libinput_device,
+					    libinput_event_get_gesture_event(event));
+		break;
+	case LIBINPUT_EVENT_GESTURE_SWIPE_END:
+		handle_pointer_swipe_end(libinput_device,
+					 libinput_event_get_gesture_event(event));
+		break;
+	case LIBINPUT_EVENT_GESTURE_PINCH_BEGIN:
+		handle_pointer_pinch_begin(libinput_device,
+					   libinput_event_get_gesture_event(event));
+		break;
+	case LIBINPUT_EVENT_GESTURE_PINCH_UPDATE:
+		handle_pointer_pinch_update(libinput_device,
+					    libinput_event_get_gesture_event(event));
+		break;
+	case LIBINPUT_EVENT_GESTURE_PINCH_END:
+		handle_pointer_pinch_end(libinput_device,
+					 libinput_event_get_gesture_event(event));
 		break;
 	default:
 		handled = 0;

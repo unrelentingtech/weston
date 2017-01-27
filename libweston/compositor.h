@@ -443,6 +443,8 @@ struct weston_pointer_client {
 	struct wl_client *client;
 	struct wl_list pointer_resources;
 	struct wl_list relative_pointer_resources;
+	struct wl_list swipe_gesture_resources;
+	struct wl_list pinch_gesture_resources;
 };
 
 struct weston_pointer {
@@ -1669,6 +1671,13 @@ void
 notify_touch_calibrator_cancel(struct weston_touch_device *device);
 
 void
+notify_pointer_swipe(struct weston_seat *seat, uint32_t time, int cancelled,
+		     int fingers, wl_fixed_t dx, wl_fixed_t dy, int gesture_type);
+void
+notify_pointer_pinch(struct weston_seat *seat, uint32_t time, int cancelled,
+		     int fingers, wl_fixed_t dx, wl_fixed_t dy,
+		     wl_fixed_t scale, wl_fixed_t rotation_diff, int gesture_type);
+void
 weston_layer_entry_insert(struct weston_layer_entry *list,
 			  struct weston_layer_entry *entry);
 void
@@ -2034,6 +2043,9 @@ weston_compositor_set_xkb_rule_names(struct weston_compositor *ec,
 				     struct xkb_rule_names *names);
 void
 weston_compositor_xkb_destroy(struct weston_compositor *ec);
+
+void
+weston_pointer_gestures_init(struct weston_compositor *ec);
 
 /* String literal of spaces, the same width as the timestamp. */
 #define STAMP_SPACE "               "

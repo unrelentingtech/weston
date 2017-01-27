@@ -45,6 +45,7 @@
 #include "relative-pointer-unstable-v1-server-protocol.h"
 #include "pointer-constraints-unstable-v1-server-protocol.h"
 #include "input-timestamps-unstable-v1-server-protocol.h"
+#include "pointer-gestures-unstable-v1-server-protocol.h"
 
 enum pointer_constraint_type {
 	POINTER_CONSTRAINT_TYPE_LOCK,
@@ -205,6 +206,8 @@ weston_pointer_client_create(struct wl_client *client)
 	pointer_client->client = client;
 	wl_list_init(&pointer_client->pointer_resources);
 	wl_list_init(&pointer_client->relative_pointer_resources);
+	wl_list_init(&pointer_client->swipe_gesture_resources);
+	wl_list_init(&pointer_client->pinch_gesture_resources);
 
 	return pointer_client;
 }
@@ -232,7 +235,9 @@ static bool
 weston_pointer_client_is_empty(struct weston_pointer_client *pointer_client)
 {
 	return (wl_list_empty(&pointer_client->pointer_resources) &&
-		wl_list_empty(&pointer_client->relative_pointer_resources));
+		wl_list_empty(&pointer_client->relative_pointer_resources) &&
+		wl_list_empty(&pointer_client->swipe_gesture_resources) &&
+		wl_list_empty(&pointer_client->pinch_gesture_resources));
 }
 
 static struct weston_pointer_client *
@@ -2765,6 +2770,110 @@ static const struct wl_pointer_interface pointer_interface = {
 	pointer_release
 };
 
+WL_EXPORT void
+notify_pointer_swipe(struct weston_seat *seat, uint32_t time, int cancelled,
+		     int fingers, wl_fixed_t dx, wl_fixed_t dy, int gesture_type)
+{
+	struct weston_pointer *pointer = weston_seat_get_pointer(seat);
+	struct weston_compositor *ec = seat->compositor;
+	struct weston_view *focus;
+	struct wl_display *display = ec->wl_display;
+	struct wl_list *resource_list;
+	struct wl_resource *resource;
+	uint32_t serial;
+
+	if (!seat->pointer_device_count ||
+	    !pointer->focus || !pointer->focus_client)
+		return;
+
+	weston_compositor_wake(ec);
+	resource_list = &pointer->focus_client->swipe_gesture_resources;
+	focus = pointer->focus;
+
+	if (wl_list_empty(resource_list))
+		return;
+
+	switch (gesture_type) {
+	case ZWP_POINTER_GESTURE_SWIPE_V1_BEGIN:
+		serial = wl_display_next_serial(display);
+		wl_resource_for_each(resource, resource_list) {
+			zwp_pointer_gesture_swipe_v1_send_begin(resource, serial,
+								time,
+								focus->surface->resource,
+								fingers);
+		}
+		break;
+	case ZWP_POINTER_GESTURE_SWIPE_V1_UPDATE:
+		wl_resource_for_each(resource, resource_list) {
+			zwp_pointer_gesture_swipe_v1_send_update(resource, time,
+								 dx, dy);
+		}
+		break;
+	case ZWP_POINTER_GESTURE_SWIPE_V1_END:
+		serial = wl_display_next_serial(display);
+		wl_resource_for_each(resource, resource_list) {
+			zwp_pointer_gesture_swipe_v1_send_end(resource, serial,
+							      time, cancelled);
+		}
+		break;
+	default:
+		return;
+	}
+}
+
+WL_EXPORT void
+notify_pointer_pinch(struct weston_seat *seat, uint32_t time, int cancelled,
+		     int fingers, wl_fixed_t dx, wl_fixed_t dy,
+		     wl_fixed_t scale, wl_fixed_t rotation_diff, int gesture_type)
+{
+	struct weston_pointer *pointer = weston_seat_get_pointer(seat);
+	struct weston_compositor *ec = seat->compositor;
+	struct weston_view *focus;
+	struct wl_display *display = ec->wl_display;
+	struct wl_list *resource_list;
+	struct wl_resource *resource;
+	uint32_t serial;
+
+	if (!seat->pointer_device_count ||
+	    !pointer->focus || !pointer->focus_client)
+		return;
+
+	weston_compositor_wake(ec);
+	resource_list = &pointer->focus_client->pinch_gesture_resources;
+	focus = pointer->focus;
+
+	if (wl_list_empty(resource_list))
+		return;
+
+	switch (gesture_type) {
+	case ZWP_POINTER_GESTURE_PINCH_V1_BEGIN:
+		serial = wl_display_next_serial(display);
+		wl_resource_for_each(resource, resource_list) {
+			zwp_pointer_gesture_pinch_v1_send_begin(resource, serial,
+								time,
+								focus->surface->resource,
+								fingers);
+		}
+		break;
+	case ZWP_POINTER_GESTURE_PINCH_V1_UPDATE:
+		wl_resource_for_each(resource, resource_list) {
+			zwp_pointer_gesture_pinch_v1_send_update(resource, time,
+								 dx, dy, scale,
+								 rotation_diff);
+		}
+		break;
+	case ZWP_POINTER_GESTURE_PINCH_V1_END:
+		serial = wl_display_next_serial(display);
+		wl_resource_for_each(resource, resource_list) {
+			zwp_pointer_gesture_pinch_v1_send_end(resource, serial,
+							      time, cancelled);
+		}
+		break;
+	default:
+		return;
+	}
+}
+
 static void
 seat_get_pointer(struct wl_client *client, struct wl_resource *resource,
 		 uint32_t id)
@@ -5070,4 +5179,109 @@ weston_input_init(struct weston_compositor *compositor)
 		return -1;
 
 	return 0;
+}
+
+static void
+pointer_gesture_swipe_destroy(struct wl_client *client,
+			      struct wl_resource *resource)
+{
+	wl_resource_destroy(resource);
+}
+
+static const struct
+zwp_pointer_gesture_swipe_v1_interface pointer_gesture_swipe_interface = {
+	pointer_gesture_swipe_destroy
+};
+
+static void
+pointer_gesture_pinch_destroy(struct wl_client *client,
+			      struct wl_resource *resource)
+{
+	wl_resource_destroy(resource);
+}
+
+static const struct
+zwp_pointer_gesture_swipe_v1_interface pointer_gesture_pinch_interface = {
+	pointer_gesture_pinch_destroy
+};
+
+static void
+pointer_gestures_get_swipe(struct wl_client *client,
+			   struct wl_resource *resource,
+			   uint32_t id, struct wl_resource *pointer_resource)
+{
+	struct weston_pointer *pointer =
+		wl_resource_get_user_data(pointer_resource);
+	struct weston_pointer_client *pointer_client;
+	struct wl_resource *cr;
+
+	cr = wl_resource_create(client, &zwp_pointer_gesture_swipe_v1_interface,
+				wl_resource_get_version(resource), id);
+	if (cr == NULL) {
+		wl_client_post_no_memory(client);
+		return;
+	}
+
+	wl_resource_set_implementation(cr, &pointer_gesture_swipe_interface,
+				       pointer, unbind_resource);
+
+	pointer_client = weston_pointer_ensure_pointer_client(pointer, client);
+	wl_list_insert(&pointer_client->swipe_gesture_resources,
+		       wl_resource_get_link(cr));
+}
+
+static void
+pointer_gestures_get_pinch(struct wl_client *client,
+			   struct wl_resource *resource,
+			   uint32_t id, struct wl_resource *pointer_resource)
+{
+	struct weston_pointer *pointer =
+		wl_resource_get_user_data(pointer_resource);
+	struct weston_pointer_client *pointer_client;
+	struct wl_resource *cr;
+
+	cr = wl_resource_create(client, &zwp_pointer_gesture_pinch_v1_interface,
+				wl_resource_get_version(resource), id);
+	if (cr == NULL) {
+		wl_client_post_no_memory(client);
+		return;
+	}
+
+	wl_resource_set_implementation(cr, &pointer_gesture_pinch_interface,
+				       pointer, unbind_resource);
+
+	pointer_client = weston_pointer_ensure_pointer_client(pointer, client);
+	wl_list_insert(&pointer_client->pinch_gesture_resources,
+		       wl_resource_get_link(cr));
+}
+
+static const struct
+zwp_pointer_gestures_v1_interface pointer_gestures_interface = {
+	pointer_gestures_get_swipe,
+	pointer_gestures_get_pinch
+};
+
+static void
+bind_pointer_gestures(struct wl_client *client,
+		      void *data, uint32_t version, uint32_t id)
+{
+	struct weston_compositor *compositor = data;
+	struct wl_resource *resource;
+
+	resource = wl_resource_create(client, &zwp_pointer_gestures_v1_interface,
+				      MIN(version, 1), id);
+	if (resource == NULL) {
+		wl_client_post_no_memory(client);
+		return;
+	}
+
+	wl_resource_set_implementation(resource, &pointer_gestures_interface,
+				       compositor, NULL);
+}
+
+WL_EXPORT void
+weston_pointer_gestures_init(struct weston_compositor *ec)
+{
+	wl_global_create(ec->wl_display, &zwp_pointer_gestures_v1_interface, 1,
+			 ec, bind_pointer_gestures);
 }
