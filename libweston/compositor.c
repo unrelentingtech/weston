@@ -6673,6 +6673,8 @@ weston_compositor_create(struct wl_display *display, void *user_data)
 	if (weston_input_init(ec) != 0)
 		goto fail;
 
+	weston_pointer_gestures_init(ec);
+
 	wl_list_init(&ec->view_list);
 	wl_list_init(&ec->plane_list);
 	wl_list_init(&ec->layer_list);
