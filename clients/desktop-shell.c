@@ -39,6 +39,9 @@
 #include <ctype.h>
 #include <time.h>
 #include <assert.h>
+#ifdef __FreeBSD__
+#include <signal.h>
+#endif
 
 #include <wayland-client.h>
 #include "window.h"

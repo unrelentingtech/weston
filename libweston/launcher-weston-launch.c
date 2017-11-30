@@ -40,9 +40,15 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
+#ifdef __linux__
+#include <sys/sysmacros.h>
 #include <linux/vt.h>
 #include <linux/kd.h>
 #include <linux/major.h>
+#elif __FreeBSD__
+#include <sys/consio.h>
+#include <sys/kbio.h>
+#endif
 
 #include "compositor.h"
 #include "weston-launch.h"
@@ -52,6 +58,10 @@
 
 #ifndef KDSKBMUTE
 #define KDSKBMUTE	0x4B51
+#endif
+
+#ifndef K_UNICODE
+#define K_UNICODE	K_CODE
 #endif
 
 #ifdef BUILD_DRM_COMPOSITOR

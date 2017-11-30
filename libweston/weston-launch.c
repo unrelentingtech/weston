@@ -45,9 +45,17 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#ifdef __linux__
 #include <linux/vt.h>
 #include <linux/major.h>
 #include <linux/kd.h>
+#include <sys/sysmacros.h>
+#elif __FreeBSD__
+#include <sys/consio.h>
+#include <sys/kbio.h>
+#include <termios.h>
+#define INPUT_MAJOR 0
+#endif
 
 #include <pwd.h>
 #include <grp.h>
@@ -70,6 +78,14 @@
 #endif
 
 #define MAX_ARGV_SIZE 256
+
+#ifdef __linux__
+#define TTY_PATH	"/dev/tty%d"
+#define TTY_0	"/dev/tty0"
+#elif __FreeBSD__
+#define TTY_PATH	"/dev/ttyv%d"
+#define TTY_0	"/dev/ttyv0"
+#endif
 
 #ifdef BUILD_DRM_COMPOSITOR
 
@@ -450,12 +466,28 @@ quit(struct weston_launch *wl, int status)
 		pam_end(wl->ph, err);
 	}
 
-	if (ioctl(wl->tty, KDSKBMUTE, 0) &&
+	if (
+#ifdef __linux__
+	    ioctl(wl->tty, KDSKBMUTE, 0) &&
+#endif
 	    ioctl(wl->tty, KDSKBMODE, wl->kb_mode))
 		fprintf(stderr, "failed to restore keyboard mode: %m\n");
 
 	if (ioctl(wl->tty, KDSETMODE, KD_TEXT))
 		fprintf(stderr, "failed to set KD_TEXT mode on tty: %m\n");
+
+#ifdef __FreeBSD__
+	/* Restore sane mode */
+	struct termios tios;
+	if (tcgetattr(wl->tty, &tios)) {
+		fprintf(stderr, "Failed to get terminal attribute: %m\n");
+	} else {
+		cfmakesane(&tios);
+		if (tcsetattr(wl->tty, TCSAFLUSH, &tios)) {
+			fprintf(stderr, "Failed to set terminal attribute: %m\n");
+		}
+	}
+#endif
 
 	/* We have to drop master before we switch the VT back in
 	 * VT_AUTO, so we don't risk switching to a VT with another
@@ -542,7 +574,9 @@ handle_signal(struct weston_launch *wl)
 static int
 setup_tty(struct weston_launch *wl, const char *tty)
 {
+#ifdef __linux__
 	struct stat buf;
+#endif
 	struct vt_mode mode = { 0 };
 	char *t;
 
@@ -555,7 +589,7 @@ setup_tty(struct weston_launch *wl, const char *tty)
 		else
 			wl->tty = open(tty, O_RDWR | O_NOCTTY);
 	} else {
-		int tty0 = open("/dev/tty0", O_WRONLY | O_CLOEXEC);
+		int tty0 = open(TTY_0, O_WRONLY | O_CLOEXEC);
 		char filename[16];
 
 		if (tty0 < 0)
@@ -564,7 +598,7 @@ setup_tty(struct weston_launch *wl, const char *tty)
 		if (ioctl(tty0, VT_OPENQRY, &wl->ttynr) < 0 || wl->ttynr == -1)
 			error(1, errno, "failed to find non-opened console");
 
-		snprintf(filename, sizeof filename, "/dev/tty%d", wl->ttynr);
+		snprintf(filename, sizeof filename, TTY_PATH, wl->ttynr);
 		wl->tty = open(filename, O_RDWR | O_NOCTTY);
 		close(tty0);
 	}
@@ -572,6 +606,7 @@ setup_tty(struct weston_launch *wl, const char *tty)
 	if (wl->tty < 0)
 		error(1, errno, "failed to open tty");
 
+#ifdef __linux__
 	if (fstat(wl->tty, &buf) == -1 ||
 	    major(buf.st_rdev) != TTY_MAJOR || minor(buf.st_rdev) == 0)
 		error(1, 0, "weston-launch must be run from a virtual terminal");
@@ -585,13 +620,30 @@ setup_tty(struct weston_launch *wl, const char *tty)
 
 		wl->ttynr = minor(buf.st_rdev);
 	}
+#elif __FreeBSD__
+	if (ioctl(wl->tty, VT_GETINDEX, &wl->ttynr))
+		error(1, errno, "couldn't get VT index");
+#endif
 
 	if (ioctl(wl->tty, KDGKBMODE, &wl->kb_mode))
 		error(1, errno, "failed to get current keyboard mode: %m\n");
 
+#ifdef __linux__
 	if (ioctl(wl->tty, KDSKBMUTE, 1) &&
 	    ioctl(wl->tty, KDSKBMODE, K_OFF))
 		error(1, errno, "failed to set K_OFF keyboard mode: %m\n");
+#elif __FreeBSD__
+	if (ioctl(wl->tty, KDSKBMODE, K_RAW) == -1)
+		error(1, errno, "failed to set K_RAW keyboard mode: %m\n");
+
+	/* Put the tty into raw mode */
+	struct termios tios;
+	if (tcgetattr(wl->tty, &tios))
+		error(1, errno, "Failed to get terminal attribute: %m\n");
+	cfmakeraw(&tios);
+	if (tcsetattr(wl->tty, TCSAFLUSH, &tios))
+		error(1, errno, "Failed to set terminal attribute: %m\n");
+#endif
 
 	if (ioctl(wl->tty, KDSETMODE, KD_GRAPHICS))
 		error(1, errno, "failed to set KD_GRAPHICS mode on tty: %m\n");
@@ -599,6 +651,9 @@ setup_tty(struct weston_launch *wl, const char *tty)
 	mode.mode = VT_PROCESS;
 	mode.relsig = SIGUSR1;
 	mode.acqsig = SIGUSR2;
+#ifdef __FreeBSD__
+	mode.frsig = SIGIO; /* not used, but has to be set anyway */
+#endif
 	if (ioctl(wl->tty, VT_SETMODE, &mode) < 0)
 		error(1, errno, "failed to take control of vt handling\n");
 
@@ -620,7 +675,12 @@ setup_session(struct weston_launch *wl, char **child_argv)
 	}
 
 	term = getenv("TERM");
+#ifdef __linux__
 	clearenv();
+#else
+	extern char **environ;
+	environ[0] = NULL;
+#endif
 	if (term)
 		setenv("TERM", term, 1);
 	setenv("USER", wl->pw->pw_name, 1);

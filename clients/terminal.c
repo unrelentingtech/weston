@@ -32,7 +32,12 @@
 #include <unistd.h>
 #include <math.h>
 #include <time.h>
+#ifdef __linux__
 #include <pty.h>
+#elif __FreeBSD__
+#include <libutil.h>
+#include <sys/ttycom.h>
+#endif
 #include <ctype.h>
 #include <cairo.h>
 #include <sys/epoll.h>

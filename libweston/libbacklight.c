@@ -36,11 +36,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#ifdef __linux__
 #include <linux/types.h>
+#include <malloc.h>
+#elif __FreeBSD__
+#include <libgen.h>
+#endif
 #include <dirent.h>
 #include <drm.h>
 #include <fcntl.h>
-#include <malloc.h>
 #include <string.h>
 #include <errno.h>
 
