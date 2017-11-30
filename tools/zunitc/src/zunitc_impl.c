@@ -36,6 +36,11 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#ifdef __FreeBSD__
+#include <sys/signal.h>
+#include <signal.h>
+#include <libgen.h>
+#endif
 
 #include "zunitc/zunitc_impl.h"
 #include "zunitc/zunitc.h"

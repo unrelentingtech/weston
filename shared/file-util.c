@@ -35,6 +35,10 @@
 
 #include "file-util.h"
 
+#ifndef ETIME
+#define ETIME ETIMEDOUT
+#endif
+
 static int
 current_time_str(char *str, size_t len, const char *fmt)
 {

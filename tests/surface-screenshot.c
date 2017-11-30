@@ -37,6 +37,10 @@
 #include "compositor/weston.h"
 #include "file-util.h"
 
+#ifndef ETIME
+#define ETIME ETIMEDOUT
+#endif
+
 static char *
 encode_PAM_comment_line(const char *comment)
 {

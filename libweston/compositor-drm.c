@@ -37,7 +37,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <linux/input.h>
+#ifdef __linux__
 #include <linux/vt.h>
+#endif
 #include <assert.h>
 #include <sys/mman.h>
 #include <dlfcn.h>
@@ -6738,11 +6740,26 @@ out_fd:
 static struct udev_device*
 find_primary_gpu(struct drm_backend *b, const char *seat)
 {
+	struct udev_device *device;
+#ifndef __FreeBSD__
+	struct udev_device *drm_device, *pci;
 	struct udev_enumerate *e;
 	struct udev_list_entry *entry;
 	const char *path, *device_seat, *id;
-	struct udev_device *device, *drm_device, *pci;
+#endif
 
+#ifdef __FreeBSD__
+	// libudev-devd doesn't support matching
+	device = udev_device_new_from_syspath(b->udev, "/dev/dri/card0");
+	/* Make sure this device is actually capable of modesetting;
+	 * if this call succeeds, b->drm.{fd,filename} will be set,
+	 * and any old values freed. */
+	if (!drm_device_is_kms(b, device)) {
+		udev_device_unref(device);
+		device = NULL;
+	}
+	return device;
+#else
 	e = udev_enumerate_new(b->udev);
 	udev_enumerate_add_match_subsystem(e, "drm");
 	udev_enumerate_add_match_sysname(e, "card[0-9]*");
@@ -6810,6 +6827,7 @@ find_primary_gpu(struct drm_backend *b, const char *seat)
 
 	udev_enumerate_unref(e);
 	return drm_device;
+#endif
 }
 
 static struct udev_device *
