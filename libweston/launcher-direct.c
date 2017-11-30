@@ -34,9 +34,15 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#ifdef __linux__
 #include <linux/vt.h>
 #include <linux/kd.h>
 #include <linux/major.h>
+#elif __FreeBSD__
+#include <sys/consio.h>
+#include <sys/kbio.h>
+#include <termios.h>
+#endif
 
 #include "launcher-impl.h"
 
@@ -46,12 +52,17 @@
 #define KDSKBMUTE	0x4B51
 #endif
 
+#ifdef __linux__
+#define TTY_PATH	"/dev/tty%d"
 /* major()/minor() */
 #ifdef MAJOR_IN_MKDEV
 #include <sys/mkdev.h>
 #endif
 #ifdef MAJOR_IN_SYSMACROS
 #include <sys/sysmacros.h>
+#endif
+#elif __FreeBSD__
+#define TTY_PATH	"/dev/ttyv%d"
 #endif
 
 #ifdef BUILD_DRM_COMPOSITOR
@@ -122,9 +133,11 @@ setup_tty(struct launcher_direct *launcher, int tty)
 {
 	struct wl_event_loop *loop;
 	struct vt_mode mode = { 0 };
+#ifdef __linux__
 	struct stat buf;
+#endif
 	char tty_device[32] ="<stdin>";
-	int ret, kd_mode;
+	int ret, kd_mode, vt_num;
 
 	if (tty == 0) {
 		launcher->tty = dup(tty);
@@ -133,7 +146,7 @@ setup_tty(struct launcher_direct *launcher, int tty)
 			return -1;
 		}
 	} else {
-		snprintf(tty_device, sizeof tty_device, "/dev/tty%d", tty);
+		snprintf(tty_device, sizeof tty_device, TTY_PATH, tty);
 		launcher->tty = open(tty_device, O_RDWR | O_CLOEXEC);
 		if (launcher->tty == -1) {
 			weston_log("couldn't open tty %s: %m\n", tty_device);
@@ -141,6 +154,7 @@ setup_tty(struct launcher_direct *launcher, int tty)
 		}
 	}
 
+#ifdef __linux__
 	if (fstat(launcher->tty, &buf) == -1 ||
 	    major(buf.st_rdev) != TTY_MAJOR || minor(buf.st_rdev) == 0) {
 		weston_log("%s not a vt\n", tty_device);
@@ -148,6 +162,14 @@ setup_tty(struct launcher_direct *launcher, int tty)
 			   "use --tty to specify a tty\n");
 		goto err_close;
 	}
+	vt_num = minor(buf.st_rdev);
+#elif __FreeBSD__
+	ret = ioctl(launcher->tty, VT_GETINDEX, &vt_num);
+	if (ret) {
+		weston_log("couldn't get VT index for %s: %m\n", tty_device);
+		return -1;
+	}
+#endif
 
 	ret = ioctl(launcher->tty, KDGETMODE, &kd_mode);
 	if (ret) {
@@ -160,19 +182,38 @@ setup_tty(struct launcher_direct *launcher, int tty)
 		goto err_close;
 	}
 
-	ioctl(launcher->tty, VT_ACTIVATE, minor(buf.st_rdev));
-	ioctl(launcher->tty, VT_WAITACTIVE, minor(buf.st_rdev));
+	ioctl(launcher->tty, VT_ACTIVATE, vt_num);
+	ioctl(launcher->tty, VT_WAITACTIVE, vt_num);
 
 	if (ioctl(launcher->tty, KDGKBMODE, &launcher->kb_mode)) {
 		weston_log("failed to read keyboard mode: %m\n");
 		goto err_close;
 	}
 
+#ifdef __linux__
 	if (ioctl(launcher->tty, KDSKBMUTE, 1) &&
 	    ioctl(launcher->tty, KDSKBMODE, K_OFF)) {
 		weston_log("failed to set K_OFF keyboard mode: %m\n");
 		goto err_close;
 	}
+#elif __FreeBSD__
+	if (ioctl(launcher->tty, KDSKBMODE, K_RAW) == -1) {
+		weston_log("failed to set K_RAW keyboard mode: %m\n");
+		goto err_close;
+	}
+
+	/* Put the tty into raw mode */
+	struct termios tios;
+	if (tcgetattr(launcher->tty, &tios)) {
+		weston_log("Failed to get terminal attribute: %m\n");
+		goto err_close;
+	}
+	cfmakeraw(&tios);
+	if (tcsetattr(launcher->tty, TCSAFLUSH, &tios)) {
+		weston_log("Failed to set terminal attribute: %m\n");
+		goto err_close;
+	}
+#endif
 
 	ret = ioctl(launcher->tty, KDSETMODE, KD_GRAPHICS);
 	if (ret) {
@@ -180,21 +221,12 @@ setup_tty(struct launcher_direct *launcher, int tty)
 		goto err_close;
 	}
 
-	/*
-	 * SIGRTMIN is used as global VT-acquire+release signal. Note that
-	 * SIGRT* must be tested on runtime, as their exact values are not
-	 * known at compile-time. POSIX requires 32 of them to be available.
-	 */
-	if (SIGRTMIN > SIGRTMAX) {
-		weston_log("not enough RT signals available: %u-%u\n",
-			   SIGRTMIN, SIGRTMAX);
-		ret = -EINVAL;
-		goto err_close;
-	}
-
 	mode.mode = VT_PROCESS;
-	mode.relsig = SIGRTMIN;
-	mode.acqsig = SIGRTMIN;
+	mode.relsig = SIGUSR2;
+	mode.acqsig = SIGUSR2;
+#ifdef __FreeBSD__
+	mode.frsig = SIGIO; /* not used, but has to be set anyway */
+#endif
 	if (ioctl(launcher->tty, VT_SETMODE, &mode) < 0) {
 		weston_log("failed to take control of vt handling\n");
 		goto err_close;
@@ -202,7 +234,7 @@ setup_tty(struct launcher_direct *launcher, int tty)
 
 	loop = wl_display_get_event_loop(launcher->compositor->wl_display);
 	launcher->vt_source =
-		wl_event_loop_add_signal(loop, SIGRTMIN, vt_handler, launcher);
+		wl_event_loop_add_signal(loop, SIGUSR2, vt_handler, launcher);
 	if (!launcher->vt_source)
 		goto err_close;
 
@@ -229,14 +261,18 @@ launcher_direct_open(struct weston_launcher *launcher_base, const char *path, in
 		return -1;
 	}
 
+#ifdef __linux__
 	if (major(s.st_rdev) == DRM_MAJOR) {
+#endif
 		launcher->drm_fd = fd;
 		if (!is_drm_master(fd)) {
 			weston_log("drm fd not master\n");
 			close(fd);
 			return -1;
 		}
+#ifdef __linux__
 	}
+#endif
 
 	return fd;
 }
@@ -253,12 +289,29 @@ launcher_direct_restore(struct weston_launcher *launcher_base)
 	struct launcher_direct *launcher = wl_container_of(launcher_base, launcher, base);
 	struct vt_mode mode = { 0 };
 
-	if (ioctl(launcher->tty, KDSKBMUTE, 0) &&
-	    ioctl(launcher->tty, KDSKBMODE, launcher->kb_mode))
+	if (
+#ifdef __linux__
+	    ioctl(launcher->tty, KDSKBMUTE, 0) &&
+#endif
+	    ioctl(launcher->tty, KDSKBMODE, launcher->kb_mode)) {
 		weston_log("failed to restore kb mode: %m\n");
+	}
 
 	if (ioctl(launcher->tty, KDSETMODE, KD_TEXT))
 		weston_log("failed to set KD_TEXT mode on tty: %m\n");
+
+#ifdef __FreeBSD__
+	/* Restore sane mode */
+	struct termios tios;
+	if (tcgetattr(launcher->tty, &tios)) {
+		weston_log("Failed to get terminal attribute: %m\n");
+	} else {
+		cfmakesane(&tios);
+		if (tcsetattr(launcher->tty, TCSAFLUSH, &tios)) {
+			weston_log("Failed to set terminal attribute: %m\n");
+		}
+	}
+#endif
 
 	/* We have to drop master before we switch the VT back in
 	 * VT_AUTO, so we don't risk switching to a VT with another

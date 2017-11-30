@@ -36,6 +36,10 @@
 #include "compositor.h"
 #include "file-util.h"
 
+#ifndef ETIME
+#define ETIME ETIMEDOUT
+#endif
+
 struct timeline_log {
 	clock_t clk_id;
 	FILE *file;

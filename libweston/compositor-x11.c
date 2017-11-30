@@ -37,6 +37,9 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/shm.h>
+#ifdef __FreeBSD__
+#include <sys/stat.h>
+#endif
 #include <linux/input.h>
 
 #include <xcb/xcb.h>
