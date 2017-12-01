@@ -94,7 +94,7 @@ foreach func : optional_libc_funcs
 endforeach
 
 optional_system_headers = [
-	'linux/sync_file.h'
+	'linux/sync_file.h', 'linux/memfd.h'
 ]
 foreach hdr : optional_system_headers
 	if cc.has_header(hdr)
