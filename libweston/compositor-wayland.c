@@ -2752,10 +2752,14 @@ wayland_backend_create(struct weston_compositor *compositor,
 	b->fullscreen = new_config->fullscreen;
 
 	if (!b->use_pixman) {
+#ifdef LIBWESTON_STATIC_GL_RENDERER
+		gl_renderer = &gl_renderer_interface;
+#else
 		gl_renderer = weston_load_module("gl-renderer.so",
 						 "gl_renderer_interface");
 		if (!gl_renderer)
 			b->use_pixman = true;
+#endif
 	}
 
 	if (!b->use_pixman) {
@@ -2834,7 +2838,7 @@ config_init_to_defaults(struct weston_wayland_backend_config *config)
 }
 
 WL_EXPORT int
-weston_backend_init(struct weston_compositor *compositor,
+BACKEND_INIT(struct weston_compositor *compositor,
 		    struct weston_backend_config *config_base)
 {
 	struct wayland_backend *b;

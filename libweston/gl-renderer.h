@@ -123,3 +123,6 @@ struct gl_renderer_interface {
 	void (*print_egl_error_state)(void);
 };
 
+#ifdef LIBWESTON_STATIC_GL_RENDERER
+struct gl_renderer_interface gl_renderer_interface;
+#endif

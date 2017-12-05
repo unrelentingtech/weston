@@ -46,6 +46,14 @@ struct weston_x11_backend_config {
 	bool use_pixman;
 };
 
+#ifdef LIBWESTON_STATIC_BACKENDS
+#define BACKEND_INIT weston_x11_backend_init
+int BACKEND_INIT(struct weston_compositor *compositor,
+				struct weston_backend_config *config_base);
+#else
+#define BACKEND_INIT weston_backend_init
+#endif
+
 #ifdef  __cplusplus
 }
 #endif

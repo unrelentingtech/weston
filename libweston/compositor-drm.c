@@ -4100,10 +4100,14 @@ create_gbm_device(int fd)
 {
 	struct gbm_device *gbm;
 
-	gl_renderer = weston_load_module("gl-renderer.so",
-					 "gl_renderer_interface");
+#ifdef LIBWESTON_STATIC_GL_RENDERER
+		gl_renderer = &gl_renderer_interface;
+#else
+		gl_renderer = weston_load_module("gl-renderer.so",
+						 "gl_renderer_interface");
 	if (!gl_renderer)
 		return NULL;
+#endif
 
 	/* GBM will load a dri driver, but even though they need symbols from
 	 * libglapi, in some version of Mesa they are not linked to it. Since
@@ -7516,7 +7520,7 @@ config_init_to_defaults(struct weston_drm_backend_config *config)
 }
 
 WL_EXPORT int
-weston_backend_init(struct weston_compositor *compositor,
+BACKEND_INIT(struct weston_compositor *compositor,
 		    struct weston_backend_config *config_base)
 {
 	struct drm_backend *b;

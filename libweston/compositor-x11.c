@@ -1804,8 +1804,12 @@ init_gl_renderer(struct x11_backend *b)
 {
 	int ret;
 
-	gl_renderer = weston_load_module("gl-renderer.so",
-					 "gl_renderer_interface");
+#ifdef LIBWESTON_STATIC_GL_RENDERER
+		gl_renderer = &gl_renderer_interface;
+#else
+		gl_renderer = weston_load_module("gl-renderer.so",
+						 "gl_renderer_interface");
+#endif
 	if (!gl_renderer)
 		return -1;
 
@@ -1925,7 +1929,7 @@ config_init_to_defaults(struct weston_x11_backend_config *config)
 }
 
 WL_EXPORT int
-weston_backend_init(struct weston_compositor *compositor,
+BACKEND_INIT(struct weston_compositor *compositor,
 		    struct weston_backend_config *config_base)
 {
 	struct x11_backend *b;

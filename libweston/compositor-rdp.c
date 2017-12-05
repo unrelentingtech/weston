@@ -1448,7 +1448,7 @@ config_init_to_defaults(struct weston_rdp_backend_config *config)
 }
 
 WL_EXPORT int
-weston_backend_init(struct weston_compositor *compositor,
+BACKEND_INIT(struct weston_compositor *compositor,
 		    struct weston_backend_config *config_base)
 {
 	struct rdp_backend *b;
