@@ -33,6 +33,7 @@
 #include <string.h>
 #include <assert.h>
 #include <limits.h>
+#include <sys/wait.h>
 
 #include "compositor.h"
 #include "compositor/weston.h"
