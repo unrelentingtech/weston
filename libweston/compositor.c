@@ -6804,10 +6804,31 @@ weston_compositor_set_presentation_clock_software(
 {
 	/* In order of preference */
 	static const clockid_t clocks[] = {
+		// Linux
+#ifdef CLOCK_MONOTONIC_RAW
 		CLOCK_MONOTONIC_RAW,	/* no jumps, no crawling */
+#endif
+#ifdef CLOCK_MONOTONIC_COARSE
 		CLOCK_MONOTONIC_COARSE,	/* no jumps, may crawl, fast & coarse */
+#endif
+
+		// FreeBSD / DragonFly
+#ifdef CLOCK_MONOTONIC_FAST
+		CLOCK_MONOTONIC_FAST,	/* no jumps, may crawl, fast & coarse */
+#endif
+
 		CLOCK_MONOTONIC,	/* no jumps, may crawl */
+
+		// Linux
+#ifdef CLOCK_REALTIME_COARSE
 		CLOCK_REALTIME_COARSE,	/* may jump and crawl, fast & coarse */
+#endif
+
+		// FreeBSD / DragonFly
+#ifdef CLOCK_REALTIME_FAST
+		CLOCK_REALTIME_FAST,	/* may jump and crawl, fast & coarse */
+#endif
+
 		CLOCK_REALTIME		/* may jump and crawl */
 	};
 	unsigned i;
