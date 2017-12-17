@@ -114,6 +114,27 @@ AC_CHECK_HEADERS([linux/memfd.h])
 
 AC_CHECK_FUNCS([mkostemp strchrnul initgroups posix_fallocate])
 
+AC_MSG_CHECKING([for program_invocation_short_name])
+AC_TRY_COMPILE([#include <errno.h>],
+	       [const char *pn = program_invocation_short_name;],
+	       AC_DEFINE(HAVE_PROGRAM_INVOCATION_SHORT_NAME, 1, [Define to 1 if program_invocation_short_name exists])
+	       AC_MSG_RESULT(yes),
+	       AC_MSG_RESULT(no))
+
+AC_MSG_CHECKING([for getprogname])
+AC_TRY_COMPILE([#include <stdlib.h>],
+	       [getprogname();],
+	       AC_DEFINE(HAVE_GETPROGNAME, 1, [Define to 1 if getprogname exists])
+	       AC_MSG_RESULT(yes),
+	       AC_MSG_RESULT(no))
+
+AH_BOTTOM([#ifndef HAVE_PROGRAM_INVOCATION_SHORT_NAME
+#ifdef HAVE_GETPROGNAME
+#include <stdlib.h>
+#define program_invocation_short_name getprogname()
+#endif
+#endif])
+
 # check for libdrm as a build-time dependency only
 # libdrm 2.4.30 introduced drm_fourcc.h.
 PKG_CHECK_MODULES(LIBDRM, [libdrm >= 2.4.68], [], [AC_MSG_ERROR([

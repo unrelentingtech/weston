@@ -84,6 +84,10 @@ elif cc.has_header_symbol('sys/mkdev.h', 'major')
 	config_h.set('MAJOR_IN_MKDEV', 1)
 endif
 
+if cc.has_function('getprogname') and not cc.has_header_symbol('errno.h', 'program_invocation_short_name')
+	config_h.set('program_invocation_short_name', 'getprogname()')
+endif
+
 optional_libc_funcs = [
 	'mkostemp', 'strchrnul', 'initgroups', 'posix_fallocate'
 ]
