@@ -42,7 +42,11 @@
 #include <sys/socket.h>
 #include <libinput.h>
 #include <sys/time.h>
+#ifdef __linux__
 #include <linux/limits.h>
+#else
+#include <sys/param.h>
+#endif
 
 #include "weston.h"
 #include "compositor.h"
