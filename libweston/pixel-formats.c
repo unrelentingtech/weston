@@ -26,7 +26,11 @@
 
 #include "config.h"
 
+#ifdef __linux__
 #include <endian.h>
+#else
+#include <sys/endian.h>
+#endif
 #include <inttypes.h>
 #include <stdbool.h>
 #include <unistd.h>
