@@ -34,7 +34,7 @@
 #include <sys/mman.h>
 #include <assert.h>
 #include <unistd.h>
-#include <values.h>
+#include <float.h>
 #include <fcntl.h>
 #include <limits.h>
 
