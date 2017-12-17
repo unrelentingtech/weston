@@ -72,6 +72,10 @@ weston_xserver_shutdown(struct weston_xserver *wxs)
 	unlink(path);
 	snprintf(path, sizeof path, "/tmp/.X11-unix/X%d", wxs->display);
 	unlink(path);
+#ifndef __linux__
+	snprintf(path, sizeof path, "/tmp/.X11-unix/X%d_", wxs->display);
+	unlink(path);
+#endif
 	if (wxs->pid == 0) {
 		wl_event_source_remove(wxs->abstract_source);
 		wl_event_source_remove(wxs->unix_source);
@@ -97,11 +101,26 @@ bind_to_abstract_socket(int display)
 		return -1;
 
 	addr.sun_family = AF_LOCAL;
+
+#ifdef __linux__
 	name_size = snprintf(addr.sun_path, sizeof addr.sun_path,
 			     "%c/tmp/.X11-unix/X%d", 0, display);
+#else
+	name_size = snprintf(addr.sun_path, sizeof addr.sun_path,
+			     "/tmp/.X11-unix/X%d_", display) + 1;
+#endif
+
 	size = offsetof(struct sockaddr_un, sun_path) + name_size;
+#ifndef __linux__
+	unlink(addr.sun_path);
+#endif
+
 	if (bind(fd, (struct sockaddr *) &addr, size) < 0) {
+#ifdef __linux__
 		weston_log("failed to bind to @%s: %m\n", addr.sun_path + 1);
+#else
+		weston_log("failed to bind to %s: %m\n", addr.sun_path);
+#endif
 		close(fd);
 		return -1;
 	}
