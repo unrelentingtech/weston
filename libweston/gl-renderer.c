@@ -44,7 +44,7 @@
 
 #ifdef HAVE_LINUX_SYNC_FILE_H
 #include <linux/sync_file.h>
-#else
+#elif __linux__
 #include "weston-sync-file.h"
 #endif
 
@@ -315,6 +315,7 @@ get_renderer(struct weston_compositor *ec)
 	return (struct gl_renderer *)ec->renderer;
 }
 
+#if defined(HAVE_LINUX_SYNC_FILE_H) || defined(__linux__)
 static int
 linux_sync_file_read_timestamp(int fd, uint64_t *ts)
 {
@@ -333,6 +334,13 @@ linux_sync_file_read_timestamp(int fd, uint64_t *ts)
 
 	return 0;
 }
+#else
+static int
+linux_sync_file_read_timestamp(int fd __attribute__((unused)), uint64_t *ts __attribute__((unused)))
+{
+	return -1;
+}
+#endif
 
 static void
 timeline_render_point_destroy(struct timeline_render_point *trp)
