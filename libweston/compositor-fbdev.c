@@ -892,8 +892,10 @@ fbdev_backend_create(struct weston_compositor *compositor,
 	backend->session_listener.notify = session_notify;
 	wl_signal_add(&compositor->session_signal,
 		      &backend->session_listener);
-	compositor->launcher =
-		weston_launcher_connect(compositor, param->tty, seat_id, false);
+	if (!compositor->launcher) {
+		compositor->launcher =
+			weston_launcher_connect(compositor, param->tty, seat_id, false);
+	}
 	if (!compositor->launcher) {
 		weston_log("fatal: fbdev backend should be run using "
 			   "weston-launch binary, or your system should "

@@ -7337,9 +7337,11 @@ drm_backend_create(struct weston_compositor *compositor,
 		goto err_compositor;
 
 	/* Check if we run drm-backend using weston-launch */
-	compositor->launcher = weston_launcher_connect(compositor, config->tty,
-						       seat_id, true);
-	if (compositor->launcher == NULL) {
+	if (!compositor->launcher) {
+		compositor->launcher = weston_launcher_connect(compositor, config->tty,
+							       seat_id, true);
+	}
+	if (!compositor->launcher) {
 		weston_log("fatal: drm backend should be run using "
 			   "weston-launch binary, or your system should "
 			   "provide the logind D-Bus API.\n");
