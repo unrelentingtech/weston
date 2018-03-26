@@ -3482,7 +3482,7 @@ gl_renderer_create_pbuffer_surface(struct gl_renderer *gr) {
 	return 0;
 }
 
-static int
+int
 gl_renderer_display_create(struct weston_compositor *ec, EGLenum platform,
 	void *native_window, const EGLint *platform_attribs,
 	const EGLint *config_attribs, const EGLint *visual_id, int n_ids)
