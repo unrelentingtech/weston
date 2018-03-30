@@ -2214,6 +2214,7 @@ drm_output_apply_state_legacy(struct drm_output_state *state)
 	int n_conn = 0;
 	struct timespec now;
 	int ret = 0;
+	int retries = 0;
 
 	wl_list_for_each(head, &output->base.head_list, base.output_link) {
 		assert(n_conn < MAX_CLONED_CONNECTORS);
@@ -2300,11 +2301,13 @@ drm_output_apply_state_legacy(struct drm_output_state *state)
 		}
 	}
 
-	if (drmModePageFlip(backend->drm.fd, output->crtc_id,
+	while (drmModePageFlip(backend->drm.fd, output->crtc_id,
 			    scanout_state->fb->fb_id,
 			    DRM_MODE_PAGE_FLIP_EVENT, output) < 0) {
-		weston_log("queueing pageflip failed: %m\n");
-		goto err;
+		weston_log("queueing pageflip (try %d) failed: %m\n", retries);
+		if (retries++ > 32) {
+			goto err;
+		}
 	}
 
 	assert(!output->page_flip_pending);
@@ -2796,6 +2799,7 @@ drm_pending_state_apply(struct drm_pending_state *pending_state)
 			      link) {
 		struct drm_output *output = output_state->output;
 		int ret;
+		int retries = 0;
 
 		if (output->virtual) {
 			drm_output_assign_state(output_state,
@@ -2803,17 +2807,15 @@ drm_pending_state_apply(struct drm_pending_state *pending_state)
 			continue;
 		}
 
-		ret = drm_output_apply_state_legacy(output_state);
-		if (ret != 0) {
-			weston_log("Couldn't apply state for output %s\n",
-				   output->base.name);
+		while ((ret = drm_output_apply_state_legacy(output_state)) != 0 && retries++ < 32) {
+			weston_log("(2302) Couldn't apply state for output %s (try %d)\n",
+				   output->base.name, retries);
 		}
 	}
 
 	b->state_invalid = false;
 
 	assert(wl_list_empty(&pending_state->output_list));
-
 	drm_pending_state_free(pending_state);
 
 	return 0;
