@@ -2687,8 +2687,8 @@ drm_pending_state_apply_atomic(struct drm_pending_state *pending_state,
 		wl_list_for_each(plane, &b->plane_list, link) {
 			drm_debug(b, "\t\t[atomic] starting with plane %lu disabled\n",
 				  (unsigned long) plane->plane_id);
-			plane_add_prop(req, plane, WDRM_PLANE_CRTC_ID, 0);
-			plane_add_prop(req, plane, WDRM_PLANE_FB_ID, 0);
+			//plane_add_prop(req, plane, WDRM_PLANE_CRTC_ID, 0);
+			//plane_add_prop(req, plane, WDRM_PLANE_FB_ID, 0);
 		}
 
 		flags |= DRM_MODE_ATOMIC_ALLOW_MODESET;
@@ -2718,7 +2718,7 @@ drm_pending_state_apply_atomic(struct drm_pending_state *pending_state,
 	}
 
 	if (ret != 0) {
-		weston_log("atomic: couldn't commit new state: %m\n");
+		weston_log("atomic: couldn't commit new state: %s\n", strerror(ret));
 		goto out;
 	}
 
