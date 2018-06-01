@@ -593,6 +593,11 @@ weston_wm_window_read_properties(struct weston_wm_window *window)
 				}
 			break;
 		case TYPE_WM_NORMAL_HINTS:
+			if (xcb_get_property_value_length(reply) < sizeof window->size_hints) {
+				weston_log("TYPE_WM_NORMAL_HINTS is too short: %d < %d\n",
+						xcb_get_property_value_length(reply), sizeof window->size_hints);
+				break;
+			};
 			memcpy(&window->size_hints,
 			       xcb_get_property_value(reply),
 			       sizeof window->size_hints);
