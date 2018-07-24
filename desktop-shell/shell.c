@@ -961,18 +961,27 @@ get_output_height(struct weston_output *output)
 	return abs(output->region.extents.y1 - output->region.extents.y2);
 }
 
+static struct weston_transform *
+view_get_transform(struct weston_view *view)
+{
+	if (is_focus_view(view)) {
+		struct focus_surface *fsurf = get_focus_surface(view->surface);
+		if (fsurf)
+			return &fsurf->workspace_transform;
+	}
+	struct shell_surface *shsurf = get_shell_surface(view->surface);
+	if (shsurf)
+		return &shsurf->workspace_transform;
+	return NULL;
+}
+
 static void
 view_translate(struct workspace *ws, struct weston_view *view, double d)
 {
 	struct weston_transform *transform;
 
-	if (is_focus_view(view)) {
-		struct focus_surface *fsurf = get_focus_surface(view->surface);
-		transform = &fsurf->workspace_transform;
-	} else {
-		struct shell_surface *shsurf = get_shell_surface(view->surface);
-		transform = &shsurf->workspace_transform;
-	}
+	if (!(transform = view_get_transform(view)))
+		return;
 
 	if (wl_list_empty(&transform->link))
 		wl_list_insert(view->geometry.transformation_list.prev,
@@ -1044,13 +1053,8 @@ workspace_deactivate_transforms(struct workspace *ws)
 	struct weston_transform *transform;
 
 	wl_list_for_each(view, &ws->layer.view_list.link, layer_link.link) {
-		if (is_focus_view(view)) {
-			struct focus_surface *fsurf = get_focus_surface(view->surface);
-			transform = &fsurf->workspace_transform;
-		} else {
-			struct shell_surface *shsurf = get_shell_surface(view->surface);
-			transform = &shsurf->workspace_transform;
-		}
+		if (!(transform = view_get_transform(view)))
+			continue;
 
 		if (!wl_list_empty(&transform->link)) {
 			wl_list_remove(&transform->link);
