@@ -710,6 +710,9 @@ evdev_device_create(struct libinput_device *libinput_device,
 					   LIBINPUT_DEVICE_CAP_POINTER)) {
 		weston_seat_init_pointer(seat);
 		device->seat_caps |= EVDEV_SEAT_POINTER;
+		if (libinput_device_config_scroll_has_natural_scroll(libinput_device) &&
+			libinput_device_has_capability(libinput_device, LIBINPUT_DEVICE_CAP_GESTURE))
+			libinput_device_config_scroll_set_natural_scroll_enabled(libinput_device, true);
 	}
 	if (libinput_device_has_capability(libinput_device,
 					   LIBINPUT_DEVICE_CAP_TOUCH)) {
