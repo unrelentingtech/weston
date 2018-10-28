@@ -7291,6 +7291,18 @@ drm_virtual_output_finish_frame(struct weston_output *output_base,
 		weston_output_schedule_repaint(&output->base);
 }
 
+static struct udev_device *chosen_drm_device;
+
+static void
+update_heads_binding(struct weston_keyboard *keyboard,
+			const struct timespec *time, uint32_t key, void *data)
+{
+	struct drm_backend *b =
+		to_drm_backend(keyboard->seat->compositor);
+
+	drm_backend_update_heads(b, chosen_drm_device);
+}
+
 static const struct weston_drm_output_api api = {
 	drm_output_set_mode,
 	drm_output_set_gbm_format,
@@ -7416,6 +7428,8 @@ drm_backend_create(struct weston_compositor *compositor,
 		goto err_udev_input;
 	}
 
+	chosen_drm_device = drm_device;
+
 	/* A this point we have some idea of whether or not we have a working
 	 * cursor plane. */
 	if (!b->cursors_are_broken)
@@ -7443,8 +7457,6 @@ drm_backend_create(struct weston_compositor *compositor,
 		goto err_udev_monitor;
 	}
 
-	udev_device_unref(drm_device);
-
 	weston_compositor_add_debug_binding(compositor, KEY_O,
 					    planes_binding, b);
 	weston_compositor_add_debug_binding(compositor, KEY_C,
@@ -7455,6 +7467,8 @@ drm_backend_create(struct weston_compositor *compositor,
 					    recorder_binding, b);
 	weston_compositor_add_debug_binding(compositor, KEY_W,
 					    renderer_switch_binding, b);
+	weston_compositor_add_debug_binding(compositor, KEY_H,
+					    update_heads_binding, b);
 
 	if (compositor->renderer->import_dmabuf) {
 		if (linux_dmabuf_setup(compositor) < 0)
