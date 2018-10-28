@@ -107,6 +107,7 @@ pkgconfig.generate(
 srcs_session_helper = [
 	'launcher-direct.c',
 	'launcher-util.c',
+	'launcher-loginw.c',
 	'launcher-weston-launch.c',
 ]
 deps_session_helper = [

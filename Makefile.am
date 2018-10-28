@@ -222,6 +222,7 @@ libsession_helper_la_SOURCES =			\
 	libweston/launcher-util.h		\
 	libweston/launcher-impl.h		\
 	libweston/weston-launch.h		\
+	libweston/launcher-loginw.c		\
 	libweston/launcher-weston-launch.c	\
 	libweston/launcher-direct.c
 libsession_helper_la_CFLAGS = $(AM_CFLAGS) $(LIBDRM_CFLAGS) $(PIXMAN_CFLAGS) $(COMPOSITOR_CFLAGS)
