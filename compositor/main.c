@@ -47,6 +47,10 @@
 #else
 #include <sys/param.h>
 #endif
+#ifdef __FreeBSD__
+#include <sys/types.h>
+#include <sys/rtprio.h>
+#endif
 
 #include "weston.h"
 #include "compositor.h"
@@ -434,6 +438,10 @@ weston_client_launch(struct weston_compositor *compositor,
 	}
 
 	if (pid == 0) {
+#ifdef __FreeBSD__
+		struct rtprio prio = { RTP_PRIO_NORMAL, 0 };
+		rtprio(RTP_SET, getpid(), &prio);
+#endif
 		child_client_exec(sv[1], path);
 		_exit(-1);
 	}
