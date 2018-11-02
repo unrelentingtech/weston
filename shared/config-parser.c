@@ -251,6 +251,33 @@ weston_config_section_get_color(struct weston_config_section *section,
 
 WL_EXPORT
 int
+weston_config_section_get_float(struct weston_config_section *section,
+				 const char *key,
+				 float *value, float default_value)
+{
+	struct weston_config_entry *entry;
+	char *end;
+
+	entry = config_section_get_entry(section, key);
+	if (entry == NULL) {
+		*value = default_value;
+		errno = ENOENT;
+		return -1;
+	}
+
+	errno = 0;
+	*value = strtof(entry->value, &end);
+	if (*end != '\0') {
+		*value = default_value;
+		errno = EINVAL;
+		return -1;
+	}
+
+	return 0;
+}
+
+WL_EXPORT
+int
 weston_config_section_get_double(struct weston_config_section *section,
 				 const char *key,
 				 double *value, double default_value)
