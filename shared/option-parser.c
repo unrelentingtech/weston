@@ -52,6 +52,12 @@ handle_option(const struct weston_option *option, char *value)
 		if (errno != 0 || p == value || *p != '\0')
 			return false;
 		return true;
+	case WESTON_OPTION_FLOAT:
+		errno = 0;
+		* (float *) option->data = strtof(value, &p);
+		if (errno != 0 || p == value || *p != '\0')
+			return false;
+		return true;
 	case WESTON_OPTION_STRING:
 		* (char **) option->data = strdup(value);
 		return true;
