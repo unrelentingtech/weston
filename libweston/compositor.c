@@ -75,7 +75,7 @@ weston_output_update_matrix(struct weston_output *output);
 
 static void
 weston_output_transform_scale_init(struct weston_output *output,
-				   uint32_t transform, uint32_t scale);
+				   uint32_t transform, float scale);
 
 static void
 weston_compositor_build_view_list(struct weston_compositor *compositor);
@@ -108,7 +108,7 @@ weston_mode_switch_send_events(struct weston_head *head,
 
 		version = wl_resource_get_version(resource);
 		if (version >= WL_OUTPUT_SCALE_SINCE_VERSION && scale_changed)
-			wl_output_send_scale(resource, output->current_scale);
+			wl_output_send_scale(resource, ceil(output->current_scale));
 
 		if (version >= WL_OUTPUT_DONE_SINCE_VERSION)
 			wl_output_send_done(resource);
@@ -180,7 +180,7 @@ weston_compositor_reflow_outputs(struct weston_compositor *compositor,
 WL_EXPORT int
 weston_output_mode_set_native(struct weston_output *output,
 			      struct weston_mode *mode,
-			      int32_t scale)
+			      float scale)
 {
 	int ret;
 	int mode_changed = 0, scale_changed = 0;
@@ -251,7 +251,7 @@ weston_output_mode_switch_to_native(struct weston_output *output)
 WL_EXPORT int
 weston_output_mode_switch_to_temporary(struct weston_output *output,
 				       struct weston_mode *mode,
-				       int32_t scale)
+				       float scale)
 {
 	int ret;
 
@@ -565,7 +565,7 @@ weston_view_to_global_float(struct weston_view *view,
 WL_EXPORT void
 weston_transformed_coord(int width, int height,
 			 enum wl_output_transform transform,
-			 int32_t scale,
+			 float scale,
 			 float sx, float sy, float *bx, float *by)
 {
 	switch (transform) {
@@ -611,7 +611,7 @@ weston_transformed_coord(int width, int height,
 WL_EXPORT pixman_box32_t
 weston_transformed_rect(int width, int height,
 			enum wl_output_transform transform,
-			int32_t scale,
+			float scale,
 			pixman_box32_t rect)
 {
 	float x1, x2, y1, y2;
@@ -701,13 +701,13 @@ weston_matrix_transform_region(pixman_region32_t *dest,
 WL_EXPORT void
 weston_transformed_region(int width, int height,
 			  enum wl_output_transform transform,
-			  int32_t scale,
+			  float scale,
 			  pixman_region32_t *src, pixman_region32_t *dest)
 {
 	pixman_box32_t *src_rects, *dest_rects;
 	int nrects, i;
 
-	if (transform == WL_OUTPUT_TRANSFORM_NORMAL && scale == 1) {
+	if (transform == WL_OUTPUT_TRANSFORM_NORMAL && scale == 1.0) {
 		if (src != dest)
 			pixman_region32_copy(dest, src);
 		return;
@@ -776,7 +776,7 @@ weston_transformed_region(int width, int height,
 		}
 	}
 
-	if (scale != 1) {
+	if (scale != 1.0) {
 		for (i = 0; i < nrects; i++) {
 			dest_rects[i].x1 *= scale;
 			dest_rects[i].x2 *= scale;
@@ -1768,7 +1768,7 @@ static void
 convert_size_by_transform_scale(int32_t *width_out, int32_t *height_out,
 				int32_t width, int32_t height,
 				uint32_t transform,
-				int32_t scale)
+				float scale)
 {
 	assert(scale > 0);
 
@@ -1777,15 +1777,15 @@ convert_size_by_transform_scale(int32_t *width_out, int32_t *height_out,
 	case WL_OUTPUT_TRANSFORM_180:
 	case WL_OUTPUT_TRANSFORM_FLIPPED:
 	case WL_OUTPUT_TRANSFORM_FLIPPED_180:
-		*width_out = width / scale;
-		*height_out = height / scale;
+		*width_out = ceil(width / scale);
+		*height_out = ceil(height / scale);
 		break;
 	case WL_OUTPUT_TRANSFORM_90:
 	case WL_OUTPUT_TRANSFORM_270:
 	case WL_OUTPUT_TRANSFORM_FLIPPED_90:
 	case WL_OUTPUT_TRANSFORM_FLIPPED_270:
-		*width_out = height / scale;
-		*height_out = width / scale;
+		*width_out = ceil(height / scale);
+		*height_out = ceil(width / scale);
 		break;
 	default:
 		assert(0 && "invalid transform");
@@ -4476,7 +4476,7 @@ bind_output(struct wl_client *client,
 				output->transform);
 	if (version >= WL_OUTPUT_SCALE_SINCE_VERSION)
 		wl_output_send_scale(resource,
-				     output->current_scale);
+				     ceil(output->current_scale));
 
 	wl_list_for_each (mode, &output->mode_list, link) {
 		wl_output_send_mode(resource,
@@ -5308,7 +5308,7 @@ weston_output_update_matrix(struct weston_output *output)
 }
 
 static void
-weston_output_transform_scale_init(struct weston_output *output, uint32_t transform, uint32_t scale)
+weston_output_transform_scale_init(struct weston_output *output, uint32_t transform, float scale)
 {
 	output->transform = transform;
 	output->native_scale = scale;
@@ -5523,7 +5523,7 @@ weston_compositor_remove_output(struct weston_output *output)
  */
 WL_EXPORT void
 weston_output_set_scale(struct weston_output *output,
-			int32_t scale)
+			float scale)
 {
 	/* We can only set scale on a disabled output */
 	assert(!output->enabled);
@@ -6541,7 +6541,7 @@ weston_compositor_print_scene_graph(struct weston_compositor *ec)
 			output->current_mode->width,
 			output->current_mode->height,
 			output->current_mode->refresh / 1000.0);
-		fprintf(fp, "\tscale: %d\n", output->scale);
+		fprintf(fp, "\tscale: %.2f\n", output->scale);
 
 		fprintf(fp, "\trepaint status: %s\n",
 			output_repaint_status_text(output));

@@ -458,7 +458,7 @@ they are not affected by this multiplier.
 .RE
 .RS
 .PP
-An integer, 1 by default, typically configured as 2 or higher when needed,
+A number, 1 by default, typically configured as 1.25 or higher when needed,
 denoting the scaling multiplier for the output.
 .RE
 .TP 7

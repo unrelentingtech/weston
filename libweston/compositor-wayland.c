@@ -152,7 +152,7 @@ struct wayland_parent_output {
 
 	int32_t x, y;
 	uint32_t transform;
-	uint32_t scale;
+	float scale;
 
 	struct wl_callback *sync_cb;	/**< wl_output < 2 done replacement */
 
@@ -1508,7 +1508,7 @@ wayland_output_setup_for_parent_output(struct wayland_output *output,
 		return -1;
 	}
 
-	output->base.scale = 1;
+	output->base.scale = 1.0;
 	output->base.transform = WL_OUTPUT_TRANSFORM_NORMAL;
 
 	output->parent.output = poutput->global;
@@ -1532,7 +1532,7 @@ wayland_output_setup_fullscreen(struct wayland_output *output,
 	struct wayland_backend *b = to_wayland_backend(output->base.compositor);
 	int width = 0, height = 0;
 
-	output->base.scale = 1;
+	output->base.scale = 1.0;
 	output->base.transform = WL_OUTPUT_TRANSFORM_NORMAL;
 
 	if (wayland_backend_create_output_surface(output) < 0)

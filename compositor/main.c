@@ -68,7 +68,7 @@
 struct wet_output_config {
 	int width;
 	int height;
-	int32_t scale;
+	float scale;
 	uint32_t transform;
 };
 
@@ -550,7 +550,7 @@ wet_init_parsed_options(struct weston_compositor *ec)
 
 	config->width = 0;
 	config->height = 0;
-	config->scale = 0;
+	config->scale = 0.0;
 	config->transform = UINT32_MAX;
 
 	compositor->parsed_options = config;
@@ -1181,19 +1181,20 @@ handle_exit(struct weston_compositor *c)
 static void
 wet_output_set_scale(struct weston_output *output,
 		     struct weston_config_section *section,
-		     int32_t default_scale,
-		     int32_t parsed_scale)
+		     float default_scale,
+		     float parsed_scale)
 {
-	int32_t scale = default_scale;
+	float scale = default_scale;
 
 	if (section)
-		weston_config_section_get_int(section, "scale", &scale, default_scale);
+		weston_config_section_get_float(section, "scale", &scale, default_scale);
 
 	if (parsed_scale)
 		scale = parsed_scale;
 
 	weston_output_set_scale(output, scale);
 }
+
 
 /* UINT32_MAX is treated as invalid because 0 is a valid
  * enumeration value and the parameter is unsigned
@@ -1521,7 +1522,7 @@ drm_backend_output_configure(struct weston_output *output,
 	}
 	free(modeline);
 
-	wet_output_set_scale(output, section, 1, 0);
+	wet_output_set_scale(output, section, 1.0, 0);
 	wet_output_set_transform(output, section, WL_OUTPUT_TRANSFORM_NORMAL, UINT32_MAX);
 
 	weston_config_section_get_string(section,
@@ -2191,7 +2192,7 @@ headless_backend_output_configure(struct weston_output *output)
 	struct wet_output_config defaults = {
 		.width = 1024,
 		.height = 640,
-		.scale = 1,
+		.scale = 1.0,
 		.transform = WL_OUTPUT_TRANSFORM_NORMAL
 	};
 
@@ -2395,7 +2396,7 @@ x11_backend_output_configure(struct weston_output *output)
 	struct wet_output_config defaults = {
 		.width = 1024,
 		.height = 600,
-		.scale = 1,
+		.scale = 1.0,
 		.transform = WL_OUTPUT_TRANSFORM_NORMAL
 	};
 
@@ -2500,7 +2501,7 @@ wayland_backend_output_configure(struct weston_output *output)
 	struct wet_output_config defaults = {
 		.width = 1024,
 		.height = 640,
-		.scale = 1,
+		.scale = 1.0,
 		.transform = WL_OUTPUT_TRANSFORM_NORMAL
 	};
 
