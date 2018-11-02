@@ -118,6 +118,8 @@ static struct zuc_fixture config_test_t1 = {
 	"number=5252\n"
 	"zero=0\n"
 	"negative=-42\n"
+	"floating=0.0123\n"
+	"negative_floating=-.321\n"
 	"flag=false\n"
 	"\n"
 	"[colors]\n"
@@ -607,6 +609,81 @@ ZUC_TEST_F(config_test_t1, test028, data)
 	ZUC_ASSERT_EQ(-1, r);
 	ZUC_ASSERT_EQ(600, n);
 	ZUC_ASSERT_EQ(ERANGE, errno);
+}
+
+ZUC_TEST_F(config_test_t1, test029, data)
+{
+	int r;
+	float n;
+	struct weston_config_section *section;
+	struct weston_config *config = data;
+
+	section = weston_config_get_section(config, "bar", NULL, NULL);
+	r = weston_config_section_get_float(section, "floating", &n, 0.0);
+
+	ZUC_ASSERT_EQ(0, r);
+	ZUC_ASSERT_EQ(0.0123, n);
+	ZUC_ASSERT_EQ(0, errno);
+}
+
+ZUC_TEST_F(config_test_t1, test030, data)
+{
+	int r;
+	float n;
+	struct weston_config_section *section;
+	struct weston_config *config = data;
+
+	section = weston_config_get_section(config, "bar", NULL, NULL);
+	r = weston_config_section_get_float(section, "negative_floating", &n, 0.0);
+
+	ZUC_ASSERT_EQ(0, r);
+	ZUC_ASSERT_EQ(-0.321, n);
+	ZUC_ASSERT_EQ(0, errno);
+}
+
+ZUC_TEST_F(config_test_t1, test031, data)
+{
+	int r;
+	float n;
+	struct weston_config_section *section;
+	struct weston_config *config = data;
+
+	section = weston_config_get_section(config, "bar", NULL, NULL);
+	r = weston_config_section_get_float(section, "zero", &n, 1.0);
+
+	ZUC_ASSERT_EQ(0, r);
+	ZUC_ASSERT_EQ(0.0, n);
+	ZUC_ASSERT_EQ(0, errno);
+}
+
+ZUC_TEST_F(config_test_t1, test032, data)
+{
+	int r;
+	float n;
+	struct weston_config_section *section;
+	struct weston_config *config = data;
+
+	section = weston_config_get_section(config, "bar", NULL, NULL);
+	r = weston_config_section_get_float(section, "+++", &n, 1.0);
+
+	ZUC_ASSERT_EQ(-1, r);
+	ZUC_ASSERT_EQ(1.0, n);
+	ZUC_ASSERT_EQ(ENOENT, errno);
+}
+
+ZUC_TEST_F(config_test_t1, test033, data)
+{
+	int r;
+	float n;
+	struct weston_config_section *section;
+	struct weston_config *config = data;
+
+	section = weston_config_get_section(config, "bar", NULL, NULL);
+	r = weston_config_section_get_float(section, "flag", &n, 1.0);
+
+	ZUC_ASSERT_EQ(-1, r);
+	ZUC_ASSERT_EQ(1.0, n);
+	ZUC_ASSERT_EQ(EINVAL, errno);
 }
 
 ZUC_TEST_F(config_test_t2, doesnt_parse, data)
