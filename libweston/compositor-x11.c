@@ -134,7 +134,7 @@ struct x11_output {
 	int			shm_id;
 	void		       *buf;
 	uint8_t			depth;
-	int32_t                 scale;
+	float			scale;
 	bool			resize_pending;
 	bool			window_resized;
 };
@@ -643,8 +643,8 @@ x11_output_wait_for_map(struct x11_backend *b, struct x11_output *output)
 				(xcb_configure_notify_event_t *) event;
 
 
-			if (configure_notify->width % output->scale != 0 ||
-			    configure_notify->height % output->scale != 0)
+			if (configure_notify->width % (uint16_t)output->scale != 0 ||
+			    configure_notify->height % (uint16_t)output->scale != 0)
 				weston_log("Resolution is not a multiple of screen size, rounding\n");
 			output->mode.width = configure_notify->width;
 			output->mode.height = configure_notify->height;
