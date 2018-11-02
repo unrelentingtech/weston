@@ -258,9 +258,9 @@ struct weston_output {
 	struct wl_list feedback_list;
 
 	uint32_t transform;
-	int32_t native_scale;
-	int32_t current_scale;
-	int32_t original_scale;
+	float native_scale;
+	float current_scale;
+	float original_scale;
 
 	struct weston_mode *native_mode;
 	struct weston_mode *current_mode;
@@ -292,7 +292,7 @@ struct weston_output {
 	struct weston_timeline_object timeline;
 
 	bool enabled; /**< is in the output_list, not pending list */
-	int scale;
+	float scale;
 
 	int (*enable)(struct weston_output *output);
 	int (*disable)(struct weston_output *output);
@@ -2135,11 +2135,11 @@ weston_surface_destroy(struct weston_surface *surface);
 int
 weston_output_mode_set_native(struct weston_output *output,
 			      struct weston_mode *mode,
-			      int32_t scale);
+			      float scale);
 int
 weston_output_mode_switch_to_temporary(struct weston_output *output,
 				       struct weston_mode *mode,
-				       int32_t scale);
+				       float scale);
 int
 weston_output_mode_switch_to_native(struct weston_output *output);
 
@@ -2158,12 +2158,12 @@ weston_module_init(struct weston_compositor *compositor);
 void
 weston_transformed_coord(int width, int height,
 			 enum wl_output_transform transform,
-			 int32_t scale,
+			 float scale,
 			 float sx, float sy, float *bx, float *by);
 pixman_box32_t
 weston_transformed_rect(int width, int height,
 			enum wl_output_transform transform,
-			int32_t scale,
+			float scale,
 			pixman_box32_t rect);
 void
 weston_matrix_transform_region(pixman_region32_t *dest,
@@ -2172,7 +2172,7 @@ weston_matrix_transform_region(pixman_region32_t *dest,
 void
 weston_transformed_region(int width, int height,
 			  enum wl_output_transform transform,
-			  int32_t scale,
+			  float scale,
 			  pixman_region32_t *src, pixman_region32_t *dest);
 
 void *
@@ -2305,7 +2305,7 @@ weston_output_iterate_heads(struct weston_output *output,
 
 void
 weston_output_set_scale(struct weston_output *output,
-			int32_t scale);
+			float scale);
 
 void
 weston_output_set_transform(struct weston_output *output,
