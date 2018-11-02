@@ -37,6 +37,7 @@ extern "C" {
 enum config_key_type {
 	CONFIG_KEY_INTEGER,		/* typeof data = int */
 	CONFIG_KEY_UNSIGNED_INTEGER,	/* typeof data = unsigned int */
+	CONFIG_KEY_FLOAT,		/* typeof data = float */
 	CONFIG_KEY_STRING,		/* typeof data = char* */
 	CONFIG_KEY_BOOLEAN		/* typeof data = int */
 };
@@ -57,6 +58,7 @@ struct config_section {
 enum weston_option_type {
 	WESTON_OPTION_INTEGER,
 	WESTON_OPTION_UNSIGNED_INTEGER,
+	WESTON_OPTION_FLOAT,
 	WESTON_OPTION_STRING,
 	WESTON_OPTION_BOOLEAN
 };
@@ -90,6 +92,10 @@ int
 weston_config_section_get_color(struct weston_config_section *section,
 				const char *key,
 				uint32_t *color, uint32_t default_color);
+int
+weston_config_section_get_float(struct weston_config_section *section,
+				 const char *key,
+				 float *value, float default_value);
 int
 weston_config_section_get_double(struct weston_config_section *section,
 				 const char *key,
