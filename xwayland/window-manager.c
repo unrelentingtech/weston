@@ -2661,6 +2661,8 @@ static void
 send_configure(struct weston_surface *surface, int32_t width, int32_t height)
 {
 	struct weston_wm_window *window = get_wm_window(surface);
+	if (!window)
+		return;
 	struct weston_wm *wm = window->wm;
 	struct theme *t = window->wm->theme;
 	int new_width, new_height;
