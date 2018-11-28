@@ -40,7 +40,8 @@ struct weston_desktop {
 	struct weston_compositor *compositor;
 	struct weston_desktop_api api;
 	void *user_data;
-	struct wl_global *xdg_shell_v6;
+	struct wl_global *xdg_shell;	 /* New stable shell protocol */
+	struct wl_global *xdg_shell_v6;  /* Unstable xdg shell. */
 	struct wl_global *wl_shell;
 };
 
@@ -69,6 +70,13 @@ weston_desktop_create(struct weston_compositor *compositor,
 		MIN(sizeof(struct weston_desktop_api), api->struct_size);
 	memcpy(&desktop->api, api, desktop->api.struct_size);
 
+	desktop->xdg_shell =
+		weston_desktop_xdg_shell_create(desktop, display);
+	if (desktop->xdg_shell == NULL) {
+		weston_desktop_destroy(desktop);
+		return NULL;
+	}
+
 	desktop->xdg_shell_v6 =
 		weston_desktop_xdg_shell_v6_create(desktop, display);
 	if (desktop->xdg_shell_v6 == NULL) {
@@ -96,6 +104,8 @@ weston_desktop_destroy(struct weston_desktop *desktop)
 
 	if (desktop->wl_shell != NULL)
 		wl_global_destroy(desktop->wl_shell);
+	if (desktop->xdg_shell != NULL)
+		wl_global_destroy(desktop->xdg_shell);
 	if (desktop->xdg_shell_v6 != NULL)
 		wl_global_destroy(desktop->xdg_shell_v6);
 
