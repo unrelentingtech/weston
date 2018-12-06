@@ -1065,8 +1065,12 @@ data_device_start_drag(struct wl_client *client, struct wl_resource *resource,
 
 	if (ret < 0)
 		wl_resource_post_no_memory(resource);
-	else
-		source->seat = seat;
+	else {
+		if (source == NULL)
+			weston_log("CLANG WAS RIGHT! data_device_start_drag with null source\n");
+		else
+			source->seat = seat;
+	}
 }
 
 static void
