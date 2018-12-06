@@ -1451,6 +1451,10 @@ weston_pointer_set_focus(struct weston_pointer *pointer,
 		refocus = 1;
 
 	if (pointer->focus_client && refocus) {
+		if (pointer->focus == NULL) {
+			weston_log("CLANG WAS RIGHT! weston_pointer_set_focus pointer->focus == NULL\n");
+			goto xxbug;
+		}
 		focus_resource_list = &pointer->focus_client->pointer_resources;
 		if (!wl_list_empty(focus_resource_list)) {
 			serial = wl_display_next_serial(display);
@@ -1464,6 +1468,7 @@ weston_pointer_set_focus(struct weston_pointer *pointer,
 
 		pointer->focus_client = NULL;
 	}
+xxbug:
 
 	pointer_client = find_pointer_client_for_view(pointer, view);
 	if (pointer_client && refocus) {
