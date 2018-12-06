@@ -194,7 +194,7 @@ specifies a plugin for remote output to load (string). This can be used to load
 your own implemented remoting plugin or one with Weston as default. Available
 remoting plugins in the
 .IR "__libweston_modules_dir__"
-directroy are:
+directory are:
 .PP
 .RS 10
 .nf
@@ -211,7 +211,71 @@ backend.
 Available configuration are:
 .TP 7
 .BI "enable_tap=" true
-enables tap to click on touchpad devices
+Enables tap to click on touchpad devices.
+.TP 7
+.BI "tap_and_drag=" true
+.RB "For touchpad devices with " enable_tap " enabled. If the user taps, then "
+taps a second time, this time holding, the virtual mouse button stays down for
+as long as the user keeps their finger on the touchpad, allowing the user to
+click and drag with only taps.
+.TP 7
+.BI "tap_and_drag_lock=" true
+.RB "For touchpad devices with " enable_tap " and " tap_and_drag " enabled. "
+In the middle of a tap-and-drag, if the user releases the touchpad for less
+than a certain number of milliseconds, then touches it again, the virtual mouse
+button will remain pressed and the drag can continue.
+.TP 7
+.BI "disable_touchpad_while_typing=" true
+Disables touchpad devices while the keyboard is in use.
+.TP 7
+.BI "middle_emulation=" true
+For pointer devices with physical left and right buttons, but no middle button.
+When enabled, a middle button event is emitted when the left and right buttons
+are pressed simultaneously.
+.TP 7
+.BI "left_handed=" true
+For pointer devices with physical left and right buttons.  When enabled, remaps
+the left and right buttons, crossing them. Meant for use by left-handed people.
+.TP 7
+.BI "rotation=" n
+.RI "Rotates the location of the pointer " n " degrees clockwise away from "
+.RI "the default orientation, where " n " is a whole number between 0 and 359 "
+inclusive.
+.TP 7
+.BI "accel_profile=" "{flat,adaptive}"
+Set the pointer acceleration profile. The pointer's screen speed is
+proportional to the physical speed with a certain constant of proportionality.
+.RI "Call that constant alpha. " flat " keeps alpha fixed. See "
+.BR accel_speed ". "
+.IR adaptive " causes alpha to increase with physical speed, giving the user "
+more control when the speed is slow, and more reach when the speed is high.
+.IR adaptive " is the default."
+.TP 7
+.BI "accel_speed=" v
+.RB "For pointers with " accel_profile " set to "
+.IR flat ". Sets the value of alpha. " v " is normalised and must lie in the "
+.RI "range [-1, 1]. The exact mapping between " v " and alpha is "
+hardware-dependent, but higher values cause higher cursor speeds.
+.TP 7
+.BI "scroll_method=" {two_finger,edge,button,none}
+.RI "Sets the touchpad scroll method. " two_finger " scrolls with two fingers "
+.RI "on the touchpad. " edge " scrolls with one finger on the right edge. "
+.IR button " scrolls when one finger is swept across the touchpad while a "
+.RI "certain button is pressed. See "
+.BR scroll_button ". "
+.IR none " disables scrolling altogether."
+.TP 7
+.BI "natural_scroll=" true
+.RB "For touchpads with " scroll_method " set to "
+.IR two_finger ". Enables natural scrolling, mimicking the behaviour of "
+touchscreen scrolling. That is, if the two fingers move down, the surface is
+scrolled up instead of down, as if the fingers were in contact with the surface
+being scrolled.
+.TP 7
+.BI "scroll_button=" n
+.RB "For touchpads with " scroll_method " set to "
+.IR button ". Causes button " n " to trigger scrolling. " n " must be an "
+unsigned integer.
 .TP 7
 .BI "touchscreen_calibrator=" true
 Advertise the touchscreen calibrator interface to all clients. This is a
