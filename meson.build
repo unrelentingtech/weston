@@ -153,6 +153,12 @@ dep_libdrm = dependency('libdrm', version: '>= 2.4.68')
 dep_libdrm_headers = dep_libdrm.partial_dependency(compile_args: true)
 dep_threads = dependency('threads')
 
+if host_machine.system() == 'freebsd'
+	deps_libepoll = [dependency('epoll-shim')]
+else
+	deps_libepoll = []
+endif
+
 subdir('protocol')
 subdir('shared')
 subdir('libweston')

@@ -5,7 +5,7 @@ srcs_libshared = [
 	'os-compatibility.c',
 	'xalloc.c',
 ]
-deps_libshared = dep_wayland_client
+deps_libshared = [dep_wayland_client] + deps_libepoll
 
 lib_libshared = static_library(
 	'shared',

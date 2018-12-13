@@ -476,7 +476,7 @@ if get_option('weston-launch')
 	executable(
 		'weston-launch',
 		'weston-launch.c',
-		dependencies: [dep_pam, systemd_dep, dep_libdrm],
+		dependencies: [dep_pam, systemd_dep, dep_libdrm] + deps_libepoll,
 		include_directories: include_directories('..'),
 		install: true
 	)
