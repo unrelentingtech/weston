@@ -37,6 +37,8 @@ srcs_libweston = [
 	presentation_time_server_protocol_h,
 	pointer_constraints_unstable_v1_protocol_c,
 	pointer_constraints_unstable_v1_server_protocol_h,
+	pointer_gestures_unstable_v1_protocol_c,
+	pointer_gestures_unstable_v1_server_protocol_h,
 	relative_pointer_unstable_v1_protocol_c,
 	relative_pointer_unstable_v1_server_protocol_h,
 	weston_screenshooter_protocol_c,

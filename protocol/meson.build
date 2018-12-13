@@ -20,6 +20,7 @@ generated_protocols = [
 	[ 'linux-dmabuf', 'v1' ],
 	[ 'presentation-time', 'stable' ],
 	[ 'pointer-constraints', 'v1' ],
+	[ 'pointer-gestures', 'v1' ],
 	[ 'relative-pointer', 'v1' ],
 	[ 'tablet', 'v2' ],
 	[ 'text-cursor-position', 'internal' ],
