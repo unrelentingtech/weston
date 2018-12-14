@@ -1541,7 +1541,9 @@ configure_input_device_scroll(struct weston_config_section *s,
 
 	if (libinput_device_config_scroll_has_natural_scroll(device) &&
 	    weston_config_section_get_bool(s, "natural-scroll",
-					   &natural, 0) == 0) {
+					   &natural, 0) == 0 &&
+			(libinput_device_has_capability(device, LIBINPUT_DEVICE_CAP_GESTURE) ||
+			 libinput_device_config_tap_get_finger_count(device) > 0)) {
 		weston_log("          natural-scroll=%s\n",
 			   natural ? "true" : "false");
 		libinput_device_config_scroll_set_natural_scroll_enabled(
