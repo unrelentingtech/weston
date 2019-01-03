@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <poll.h>
 
 #include <errno.h>
 #include <signal.h>
@@ -214,7 +215,16 @@ launcher_loginw_data(int fd, uint32_t mask, void *data)
 		exit(-1);
 	}
 
+	struct pollfd ufds[1];
+	ufds[0].fd = launcher->fd;
+	ufds[0].events = POLLIN;
+
 	do {
+		/* check data availability because opening devices for udev-devd results in hanging here
+		 * (we shouldn't have concurrency here?? wat) */
+		if (poll(ufds, 1, 1) < 1) {
+			return 1;
+		}
 		len = recv(launcher->fd, &ret, sizeof(ret), 0);
 	} while (len < 0 && errno == EINTR);
 
