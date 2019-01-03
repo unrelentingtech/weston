@@ -230,7 +230,7 @@ if get_option('backend-drm')
 	)
 	env_modmap += 'drm-backend.so=@0@;'.format(plugin_drm.full_path())
 
-	install_headers('compositor-drm.h', subdir: dir_include_libweston)
+	install_headers('compositor-drm.h', 'libinput-seat.h', 'libinput-device.h', subdir: dir_include_libweston)
 endif
 
 

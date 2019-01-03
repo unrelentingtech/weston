@@ -134,6 +134,8 @@ device_added(struct udev_input *input, struct libinput_device *libinput_device)
 
 	if (!input->suspended)
 		weston_seat_repick(seat);
+
+	wl_signal_emit(&c->input_devices_changed_signal, libinput_device);
 }
 
 static void
@@ -143,6 +145,8 @@ device_removed(struct udev_input *input, struct libinput_device *libinput_device
 
 	device = libinput_device_get_user_data(libinput_device);
 	evdev_device_destroy(device);
+
+	wl_signal_emit(&input->compositor->input_devices_changed_signal, libinput_device);
 }
 
 static void

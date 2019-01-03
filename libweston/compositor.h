@@ -1084,6 +1084,8 @@ struct weston_compositor {
 	 */
 	struct wl_signal output_heads_changed_signal; /* arg: weston_output */
 
+	struct wl_signal input_devices_changed_signal;
+
 	struct wl_signal session_signal;
 	int session_active;
 

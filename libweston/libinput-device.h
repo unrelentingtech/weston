@@ -26,8 +26,6 @@
 #ifndef _LIBINPUT_DEVICE_H_
 #define _LIBINPUT_DEVICE_H_
 
-#include "config.h"
-
 #include <linux/input.h>
 #include <wayland-util.h>
 #include <libinput.h>
