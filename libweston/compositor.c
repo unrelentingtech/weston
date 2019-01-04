@@ -5516,22 +5516,19 @@ weston_compositor_remove_output(struct weston_output *output)
  * \param output The weston_output object that the scale is set for.
  * \param scale  Scale factor for the given output.
  *
- * It only supports setting scale for an output that
- * is not enabled and it can only be ran once.
- *
  * \memberof weston_output
  */
 WL_EXPORT void
 weston_output_set_scale(struct weston_output *output,
 			float scale)
 {
-	/* We can only set scale on a disabled output */
-	assert(!output->enabled);
-
-	/* We only want to set scale once */
-	assert(!output->scale);
-
 	output->scale = scale;
+
+	if (output->enabled) {
+		weston_output_set_transform(output, output->transform);
+		weston_output_damage(output);
+		weston_compositor_schedule_heads_changed(output->compositor);
+	}
 }
 
 /** Sets the output transform for a given output.
@@ -5583,6 +5580,7 @@ weston_output_set_transform(struct weston_output *output,
 						head->make,
 						head->model,
 						output->transform);
+			wl_output_send_scale(resource, ceil(output->current_scale));
 
 			ver = wl_resource_get_version(resource);
 			if (ver >= WL_OUTPUT_DONE_SINCE_VERSION)
