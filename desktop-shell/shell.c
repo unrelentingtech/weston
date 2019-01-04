@@ -37,6 +37,7 @@
 #include <sys/types.h>
 
 #include "shell.h"
+#include "desktop-shell-api.h"
 #include "compositor/weston.h"
 #include "weston-desktop-shell-server-protocol.h"
 #include "shared/config-parser.h"
@@ -5057,6 +5058,19 @@ handle_seat_created(struct wl_listener *listener, void *data)
 	create_shell_seat(seat);
 }
 
+static struct desktop_shell *global_shell = NULL;
+
+static struct desktop_shell *
+weston_desktop_shell_get(struct weston_compositor *compositor)
+{
+	return global_shell;
+}
+
+const struct weston_desktop_shell_api api = {
+	weston_desktop_shell_get,
+	activate,
+};
+
 WL_EXPORT int
 wet_shell_init(struct weston_compositor *ec,
 	       int *argc, char *argv[])
@@ -5071,6 +5085,7 @@ wet_shell_init(struct weston_compositor *ec,
 	if (shell == NULL)
 		return -1;
 
+	global_shell = shell;
 	shell->compositor = ec;
 
 	shell->destroy_listener.notify = shell_destroy;
@@ -5154,6 +5169,10 @@ wet_shell_init(struct weston_compositor *ec,
 	wl_signal_add(&ec->output_resized_signal, &shell->resized_listener);
 
 	screenshooter_create(ec);
+
+	if (weston_plugin_api_register(ec,
+			     WESTON_DESKTOP_SHELL_API_NAME, &api, sizeof(api)) < 0)
+		return -1;
 
 	shell_add_bindings(ec, shell);
 

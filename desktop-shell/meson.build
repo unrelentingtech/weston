@@ -25,5 +25,9 @@ if get_option('shell-desktop')
 		install: true,
 		install_dir: dir_module_weston
 	)
+	install_headers(
+		'desktop-shell-api.h',
+		subdir: dir_include_libweston
+	)
 	env_modmap += 'desktop-shell.so=@0@;'.format(plugin_shell_desktop.full_path())
 endif
