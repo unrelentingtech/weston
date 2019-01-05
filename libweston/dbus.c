@@ -365,6 +365,7 @@ int weston_dbus_add_match(DBusConnection *c, const char *format, ...)
 	dbus_bus_add_match(c, str, &err);
 	free(str);
 	if (dbus_error_is_set(&err)) {
+		weston_log("D-Bus error: %s", err.message);
 		dbus_error_free(&err);
 		return -EIO;
 	}
