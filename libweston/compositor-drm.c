@@ -7369,7 +7369,7 @@ drm_backend_create(struct weston_compositor *compositor,
 	if (compositor->launcher == NULL) {
 		weston_log("fatal: drm backend should be run using "
 			   "weston-launch binary, or your system should "
-			   "provide the logind D-Bus API.\n");
+			   "provide the logind or ConsoleKit2 D-Bus API.\n");
 		goto err_compositor;
 	}
 

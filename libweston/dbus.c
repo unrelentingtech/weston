@@ -39,7 +39,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
+#ifdef __linux__
 #include <sys/eventfd.h>
+#elif defined(__FreeBSD__)
+#include <sys/event.h>
+#endif
 #include <sys/timerfd.h>
 #include <unistd.h>
 #include <wayland-server.h>
@@ -234,7 +238,11 @@ static int weston_dbus_bind(struct wl_event_loop *loop, DBusConnection *c,
 	 * dispatcher is called after every dispatch-round.
 	 * This is required as dbus doesn't allow dispatching events from
 	 * within its own event sources. */
+#ifdef __linux__
 	fd = eventfd(0, EFD_CLOEXEC);
+#elif defined(__FreeBSD__)
+	fd = kqueue();
+#endif
 	if (fd < 0)
 		return -errno;
 

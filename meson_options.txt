@@ -146,6 +146,13 @@ option(
 )
 
 option(
+	'launcher-ck2',
+	type: 'boolean',
+	value: true,
+	description: 'Compositor: support ConsoleKit2 D-Bus protocol'
+)
+
+option(
 	'image-jpeg',
 	type: 'boolean',
 	value: true,

@@ -149,6 +149,21 @@ if get_option('launcher-logind')
 	]
 endif
 
+if get_option('launcher-ck2')
+	config_h.set('HAVE_DBUS', '1')
+	config_h.set('HAVE_CK2_LOGIN', '1')
+
+	srcs_session_helper += [
+		'dbus.c',
+		'launcher-ck2.c',
+	]
+	deps_session_helper += [
+		dependency('dbus-1', version: '>= 1.6'),
+		dependency('libconsolekit', version: '>= 1.2'),
+		deps_libepoll,
+	]
+endif
+
 lib_session_helper = static_library(
 	'session-helper',
 	srcs_session_helper,
