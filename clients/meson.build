@@ -371,6 +371,18 @@ if get_option('shell-desktop')
 		install: true
 	)
 	env_modmap += 'weston-desktop-shell=@0@;'.format(exe_shell_desktop.full_path())
+
+	exe_shell_desktop_boneless = executable(
+		'weston-desktop-shell-boneless',
+		'desktop-shell-boneless.c',
+		weston_desktop_shell_client_protocol_h,
+		weston_desktop_shell_protocol_c,
+		include_directories: include_directories('..'),
+		dependencies: dep_toytoolkit,
+		install_dir: get_option('libexecdir'),
+		install: true
+	)
+	env_modmap += 'weston-desktop-shell-boneless=@0@;'.format(exe_shell_desktop_boneless.full_path())
 endif
 
 
