@@ -5978,6 +5978,37 @@ weston_compositor_find_output_by_name(struct weston_compositor *compositor,
 	return NULL;
 }
 
+WL_EXPORT struct weston_output *
+weston_compositor_get_focused_output(struct weston_compositor *compositor)
+{
+	struct weston_seat *seat;
+	struct weston_output *output = NULL;
+
+	wl_list_for_each(seat, &compositor->seat_list, link) {
+		struct weston_touch *touch = weston_seat_get_touch(seat);
+		struct weston_pointer *pointer = weston_seat_get_pointer(seat);
+		struct weston_keyboard *keyboard =
+			weston_seat_get_keyboard(seat);
+
+		/* Priority has touch focus, then pointer and
+		 * then keyboard focus. We should probably have
+		 * three for loops and check frist for touch,
+		 * then for pointer, etc. but unless somebody has some
+		 * objections, I think this is sufficient. */
+		if (touch && touch->focus)
+			output = touch->focus->output;
+		else if (pointer && pointer->focus)
+			output = pointer->focus->output;
+		else if (keyboard && keyboard->focus)
+			output = keyboard->focus->output;
+
+		if (output)
+			break;
+	}
+
+	return output;
+}
+
 /** Create a named output
  *
  * \param compositor The compositor.

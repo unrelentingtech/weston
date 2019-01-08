@@ -2211,37 +2211,6 @@ shell_map_fullscreen(struct shell_surface *shsurf)
 	shell_configure_fullscreen(shsurf);
 }
 
-static struct weston_output *
-get_focused_output(struct weston_compositor *compositor)
-{
-	struct weston_seat *seat;
-	struct weston_output *output = NULL;
-
-	wl_list_for_each(seat, &compositor->seat_list, link) {
-		struct weston_touch *touch = weston_seat_get_touch(seat);
-		struct weston_pointer *pointer = weston_seat_get_pointer(seat);
-		struct weston_keyboard *keyboard =
-			weston_seat_get_keyboard(seat);
-
-		/* Priority has touch focus, then pointer and
-		 * then keyboard focus. We should probably have
-		 * three for loops and check frist for touch,
-		 * then for pointer, etc. but unless somebody has some
-		 * objections, I think this is sufficient. */
-		if (touch && touch->focus)
-			output = touch->focus->output;
-		else if (pointer && pointer->focus)
-			output = pointer->focus->output;
-		else if (keyboard && keyboard->focus)
-			output = keyboard->focus->output;
-
-		if (output)
-			break;
-	}
-
-	return output;
-}
-
 static void
 destroy_shell_seat(struct wl_listener *listener, void *data)
 {
@@ -2676,7 +2645,7 @@ set_fullscreen(struct shell_surface *shsurf, bool fullscreen,
 		/* handle clients launching in fullscreen */
 		if (output == NULL && !weston_surface_is_mapped(surface)) {
 			/* Set the output to the one that has focus currently. */
-			output = get_focused_output(surface->compositor);
+			output = weston_compositor_get_focused_output(surface->compositor);
 		}
 
 		shell_surface_set_output(shsurf, output);
@@ -2772,7 +2741,7 @@ set_maximized(struct shell_surface *shsurf, bool maximized)
 		struct weston_output *output;
 
 		if (!weston_surface_is_mapped(surface))
-			output = get_focused_output(surface->compositor);
+			output = weston_compositor_get_focused_output(surface->compositor);
 		else
 			output = surface->output;
 

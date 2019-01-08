@@ -2299,6 +2299,9 @@ weston_compositor_find_output_by_name(struct weston_compositor *compositor,
 				      const char *name);
 
 struct weston_output *
+weston_compositor_get_focused_output(struct weston_compositor *compositor);
+
+struct weston_output *
 weston_compositor_create_output(struct weston_compositor *compositor,
 				const char *name);
 
