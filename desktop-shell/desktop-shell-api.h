@@ -41,7 +41,19 @@ struct weston_desktop_shell_api {
 	 */
 	void
 	(*activate)(struct desktop_shell *shell, struct weston_view *view,
-	 struct weston_seat *seat, uint32_t flags);
+			struct weston_seat *seat, uint32_t flags);
+
+	/** Change the function used for calculating an output's work area,
+	 *  i.e. the output size minus panels.
+	 *
+	 * \param desktop_shell The desktop_shell context object.
+	 * \param fn The function that should be used.
+	 */
+	void
+	(*set_output_work_area_fn)(struct desktop_shell *shell,
+			void (*fn)(struct desktop_shell *shell, struct weston_output *output,
+				pixman_rectangle32_t *area));
+
 };
 
 /** Retrieve the API object for the desktop shell module.

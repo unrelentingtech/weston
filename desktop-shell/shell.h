@@ -221,6 +221,9 @@ struct desktop_shell {
 	char *client;
 
 	struct timespec startup_time;
+
+	void (*get_output_work_area)(struct desktop_shell *shell, struct weston_output *output,
+			pixman_rectangle32_t *area);
 };
 
 struct weston_output *

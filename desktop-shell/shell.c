@@ -372,6 +372,14 @@ get_output_work_area(struct desktop_shell *shell,
 }
 
 static void
+set_output_work_area_fn(struct desktop_shell *shell,
+		     void (*fn)(struct desktop_shell *shell, struct weston_output *output,
+		          pixman_rectangle32_t *area))
+{
+	shell->get_output_work_area = fn;
+}
+
+static void
 shell_grab_end(struct shell_grab *grab)
 {
 	if (grab->shsurf) {
@@ -1482,7 +1490,7 @@ constrain_position(struct weston_move_grab *move, int *cx, int *cy)
 
 	if (shsurf->shell->panel_position ==
 	    WESTON_DESKTOP_SHELL_PANEL_POSITION_TOP) {
-		get_output_work_area(shsurf->shell, surface->output, &area);
+		shsurf->shell->get_output_work_area(shsurf->shell, surface->output, &area);
 		geometry =
 			weston_desktop_surface_get_geometry(shsurf->desktop_surface);
 
@@ -2464,7 +2472,7 @@ set_maximized_position(struct desktop_shell *shell,
 	pixman_rectangle32_t area;
 	struct weston_geometry geometry;
 
-	get_output_work_area(shell, shsurf->output, &area);
+	shell->get_output_work_area(shell, shsurf->output, &area);
 	geometry = weston_desktop_surface_get_geometry(shsurf->desktop_surface);
 
 	weston_view_set_position(shsurf->view,
@@ -2649,7 +2657,7 @@ get_maximized_size(struct shell_surface *shsurf, int32_t *width, int32_t *height
 	pixman_rectangle32_t area;
 
 	shell = shell_surface_get_shell(shsurf);
-	get_output_work_area(shell, shsurf->output, &area);
+	shell->get_output_work_area(shell, shsurf->output, &area);
 
 	*width = area.width;
 	*height = area.height;
@@ -4260,7 +4268,7 @@ weston_view_set_initial_position(struct weston_view *view,
 	 * If this is negative it means that the surface is bigger than
 	 * output.
 	 */
-	get_output_work_area(shell, target_output, &area);
+	shell->get_output_work_area(shell, target_output, &area);
 
 	x = area.x;
 	y = area.y;
@@ -5069,6 +5077,7 @@ weston_desktop_shell_get(struct weston_compositor *compositor)
 const struct weston_desktop_shell_api api = {
 	weston_desktop_shell_get,
 	activate,
+	set_output_work_area_fn,
 };
 
 WL_EXPORT int
@@ -5087,6 +5096,7 @@ wet_shell_init(struct weston_compositor *ec,
 
 	global_shell = shell;
 	shell->compositor = ec;
+	shell->get_output_work_area = get_output_work_area;
 
 	shell->destroy_listener.notify = shell_destroy;
 	wl_signal_add(&ec->destroy_signal, &shell->destroy_listener);
