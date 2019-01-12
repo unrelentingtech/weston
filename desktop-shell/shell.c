@@ -1488,21 +1488,23 @@ constrain_position(struct weston_move_grab *move, int *cx, int *cy)
 	x = wl_fixed_to_int(pointer->x + move->dx);
 	y = wl_fixed_to_int(pointer->y + move->dy);
 
-	if (shsurf->shell->panel_position ==
-	    WESTON_DESKTOP_SHELL_PANEL_POSITION_TOP) {
-		shsurf->shell->get_output_work_area(shsurf->shell, surface->output, &area);
-		geometry =
-			weston_desktop_surface_get_geometry(shsurf->desktop_surface);
+	shsurf->shell->get_output_work_area(shsurf->shell, surface->output, &area);
+	geometry =
+		weston_desktop_surface_get_geometry(shsurf->desktop_surface);
 
-		bottom = y + geometry.height + geometry.y;
-		if (bottom - safety < area.y)
-			y = area.y + safety - geometry.height
-			  - geometry.y;
+	bottom = y + geometry.height + geometry.y;
 
-		if (move->client_initiated &&
-		    y + geometry.y < area.y)
-			y = area.y - geometry.y;
-	}
+	if (bottom - safety < area.y)
+		y = area.y + safety - geometry.height
+			- geometry.y;
+	if (move->client_initiated &&
+			area.y != surface->output->y &&
+			y + geometry.y < area.y)
+		y = area.y - geometry.y;
+	if (move->client_initiated &&
+			(int)area.y + (int)area.height != surface->output->height &&
+			y + safety > (int)area.y + (int)area.height)
+		y = area.y + area.height - safety;
 
 	*cx = x;
 	*cy = y;
