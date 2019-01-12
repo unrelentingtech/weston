@@ -136,9 +136,7 @@ struct weston_desktop_xdg_popup {
 
 
 static struct weston_geometry
-weston_desktop_xdg_positioner_get_geometry(struct weston_desktop_xdg_positioner *positioner,
-					   struct weston_desktop_surface *dsurface,
-					   struct weston_desktop_surface *parent)
+weston_desktop_xdg_positioner_get_geometry(struct weston_desktop_xdg_positioner *positioner)
 {
 	struct weston_geometry geometry = {
 		.x = positioner->offset.x,
@@ -218,9 +216,284 @@ weston_desktop_xdg_positioner_get_geometry(struct weston_desktop_xdg_positioner 
 	if (positioner->constraint_adjustment == XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_NONE)
 		return geometry;
 
-	/* TODO: add compositor policy configuration and the code here */
-
 	return geometry;
+}
+
+static enum xdg_positioner_anchor positioner_anchor_invert_x(
+		enum xdg_positioner_anchor anchor) {
+	switch (anchor) {
+	case XDG_POSITIONER_ANCHOR_LEFT:
+		return XDG_POSITIONER_ANCHOR_RIGHT;
+	case XDG_POSITIONER_ANCHOR_RIGHT:
+		return XDG_POSITIONER_ANCHOR_LEFT;
+	case XDG_POSITIONER_ANCHOR_TOP_LEFT:
+		return XDG_POSITIONER_ANCHOR_TOP_RIGHT;
+	case XDG_POSITIONER_ANCHOR_TOP_RIGHT:
+		return XDG_POSITIONER_ANCHOR_TOP_LEFT;
+	case XDG_POSITIONER_ANCHOR_BOTTOM_LEFT:
+		return XDG_POSITIONER_ANCHOR_BOTTOM_RIGHT;
+	case XDG_POSITIONER_ANCHOR_BOTTOM_RIGHT:
+		return XDG_POSITIONER_ANCHOR_BOTTOM_LEFT;
+	default:
+		return anchor;
+	}
+}
+
+static enum xdg_positioner_gravity positioner_gravity_invert_x(
+		enum xdg_positioner_gravity gravity) {
+	// gravity and edge enums are the same
+	return (enum xdg_positioner_gravity)positioner_anchor_invert_x(
+		(enum xdg_positioner_anchor)gravity);
+}
+
+static enum xdg_positioner_anchor positioner_anchor_invert_y(
+		enum xdg_positioner_anchor anchor) {
+	switch (anchor) {
+	case XDG_POSITIONER_ANCHOR_TOP:
+		return XDG_POSITIONER_ANCHOR_BOTTOM;
+	case XDG_POSITIONER_ANCHOR_BOTTOM:
+		return XDG_POSITIONER_ANCHOR_TOP;
+	case XDG_POSITIONER_ANCHOR_TOP_LEFT:
+		return XDG_POSITIONER_ANCHOR_BOTTOM_LEFT;
+	case XDG_POSITIONER_ANCHOR_BOTTOM_LEFT:
+		return XDG_POSITIONER_ANCHOR_TOP_LEFT;
+	case XDG_POSITIONER_ANCHOR_BOTTOM_RIGHT:
+		return XDG_POSITIONER_ANCHOR_TOP_RIGHT;
+	default:
+		return anchor;
+	}
+}
+
+static enum xdg_positioner_gravity positioner_gravity_invert_y(
+		enum xdg_positioner_gravity gravity) {
+	// gravity and edge enums are the same
+	return (enum xdg_positioner_gravity)positioner_anchor_invert_y(
+		(enum xdg_positioner_anchor)gravity);
+}
+
+
+static void weston_desktop_xdg_positioner_invert_x(struct weston_desktop_xdg_positioner *positioner) {
+	positioner->anchor = positioner_anchor_invert_x(positioner->anchor);
+	positioner->gravity = positioner_gravity_invert_x(positioner->gravity);
+}
+
+static void weston_desktop_xdg_positioner_invert_y(struct weston_desktop_xdg_positioner *positioner) {
+	positioner->anchor = positioner_anchor_invert_y(positioner->anchor);
+	positioner->gravity = positioner_gravity_invert_y(positioner->gravity);
+}
+
+static void weston_desktop_xdg_positioner_get_anchor_point(struct weston_desktop_xdg_positioner *positioner,
+		int *root_sx, int *root_sy) {
+	struct weston_geometry rect = positioner->anchor_rect;
+	enum xdg_positioner_anchor anchor = positioner->anchor;
+	int sx = 0, sy = 0;
+
+	if (anchor == XDG_POSITIONER_ANCHOR_NONE) {
+		sx = (rect.x + rect.width) / 2;
+		sy = (rect.y + rect.height) / 2;
+	} else if (anchor == XDG_POSITIONER_ANCHOR_TOP) {
+		sx = (rect.x + rect.width) / 2;
+		sy = rect.y;
+	} else if (anchor == XDG_POSITIONER_ANCHOR_BOTTOM) {
+		sx = (rect.x + rect.width) / 2;
+		sy = rect.y + rect.height;
+	} else if (anchor == XDG_POSITIONER_ANCHOR_LEFT) {
+		sx = rect.x;
+		sy = (rect.y + rect.height) / 2;
+	} else if (anchor == XDG_POSITIONER_ANCHOR_RIGHT) {
+		sx = rect.x + rect.width;
+		sy = (rect.y + rect.height) / 2;
+	} else if (anchor == XDG_POSITIONER_ANCHOR_TOP_LEFT) {
+		sx = rect.x;
+		sy = rect.y;
+	} else if (anchor == XDG_POSITIONER_ANCHOR_TOP_RIGHT) {
+		sx = rect.x + rect.width;
+		sy = rect.y;
+	} else if (anchor == XDG_POSITIONER_ANCHOR_BOTTOM_LEFT) {
+		sx = rect.x;
+		sy = rect.y + rect.height;
+	} else if (anchor == XDG_POSITIONER_ANCHOR_BOTTOM_RIGHT) {
+		sx = rect.x + rect.width;
+		sy = rect.y + rect.height;
+	}
+
+	*root_sx = sx;
+	*root_sy = sy;
+}
+
+static void weston_desktop_xdg_popup_get_toplevel_coords(struct weston_desktop_xdg_popup *popup,
+		int popup_sx, int popup_sy, int *toplevel_sx, int *toplevel_sy) {
+	struct weston_desktop_xdg_surface *parent = popup->parent;
+	while (parent) {
+		if (parent->role == WESTON_DESKTOP_XDG_SURFACE_ROLE_POPUP) {
+			struct weston_desktop_xdg_popup *popup = (struct weston_desktop_xdg_popup *)parent;
+			popup_sx += popup->geometry.x;
+			popup_sy += popup->geometry.y;
+			parent = popup->parent;
+		} else {
+			break;
+		}
+	}
+	assert(parent);
+
+	*toplevel_sx = popup_sx;
+	*toplevel_sy = popup_sy;
+}
+
+static void weston_desktop_xdg_popup_get_constraints(struct weston_desktop_xdg_popup *popup,
+		struct weston_desktop_xdg_positioner *positioner,
+		struct weston_geometry *toplevel_sx_box, int *offset_x, int *offset_y) {
+	int popup_width = popup->geometry.width;
+	int popup_height = popup->geometry.height;
+	int anchor_sx = 0, anchor_sy = 0;
+	weston_desktop_xdg_positioner_get_anchor_point(positioner, &anchor_sx, &anchor_sy);
+	int popup_sx = 0, popup_sy = 0;
+	weston_desktop_xdg_popup_get_toplevel_coords(popup, popup->geometry.x,
+		popup->geometry.y, &popup_sx, &popup_sy);
+	*offset_x = 0, *offset_y = 0;
+
+	if (popup_sx < toplevel_sx_box->x) {
+		*offset_x = toplevel_sx_box->x - popup_sx;
+	} else if (popup_sx + popup_width >
+			toplevel_sx_box->x + toplevel_sx_box->width) {
+		*offset_x = toplevel_sx_box->x + toplevel_sx_box->width -
+			(popup_sx + popup_width);
+	}
+
+	if (popup_sy < toplevel_sx_box->y) {
+		*offset_y = toplevel_sx_box->y - popup_sy;
+	} else if (popup_sy + popup_height >
+			toplevel_sx_box->y + toplevel_sx_box->height) {
+		*offset_y = toplevel_sx_box->y + toplevel_sx_box->height -
+			(popup_sy + popup_height);
+	}
+}
+
+static bool weston_desktop_xdg_popup_unconstrain_flip(struct weston_desktop_xdg_popup *popup,
+		struct weston_desktop_xdg_positioner *positioner,
+		struct weston_geometry *toplevel_sx_box) {
+	int offset_x = 0, offset_y = 0;
+	weston_desktop_xdg_popup_get_constraints(popup, positioner, toplevel_sx_box,
+		&offset_x, &offset_y);
+
+	if (!offset_x && !offset_y) {
+		return true;
+	}
+
+	bool flip_x = offset_x &&
+		(positioner->constraint_adjustment &
+		 XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_X);
+
+	bool flip_y = offset_y &&
+		(positioner->constraint_adjustment &
+		 XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_Y);
+
+	if (flip_x) {
+		weston_desktop_xdg_positioner_invert_x(positioner);
+	}
+	if (flip_y) {
+		weston_desktop_xdg_positioner_invert_y(positioner);
+	}
+
+	popup->geometry =
+		weston_desktop_xdg_positioner_get_geometry(positioner);
+
+	weston_desktop_xdg_popup_get_constraints(popup, positioner,
+		toplevel_sx_box, &offset_x, &offset_y);
+
+	if (!offset_x && !offset_y) {
+		// no longer constrained
+		return true;
+	}
+
+	// revert the positioner back if it didn't fix it and go to the next part
+	if (flip_x) {
+		weston_desktop_xdg_positioner_invert_x(positioner);
+	}
+	if (flip_y) {
+		weston_desktop_xdg_positioner_invert_y(positioner);
+	}
+
+	popup->geometry =
+		weston_desktop_xdg_positioner_get_geometry(positioner);
+
+	return false;
+}
+
+static bool weston_desktop_xdg_popup_unconstrain_slide(struct weston_desktop_xdg_popup *popup,
+		struct weston_desktop_xdg_positioner *positioner,
+		struct weston_geometry *toplevel_sx_box) {
+	int offset_x = 0, offset_y = 0;
+	weston_desktop_xdg_popup_get_constraints(popup, positioner, toplevel_sx_box,
+		&offset_x, &offset_y);
+
+	if (!offset_x && !offset_y) {
+		return true;
+	}
+
+	bool slide_x = offset_x &&
+		(positioner->constraint_adjustment &
+		 XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_X);
+
+	bool slide_y = offset_y &&
+		(positioner->constraint_adjustment &
+		 XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_Y);
+
+	if (slide_x) {
+		popup->geometry.x += offset_x;
+	}
+
+	if (slide_y) {
+		popup->geometry.y += offset_y;
+	}
+
+	int toplevel_x = 0, toplevel_y = 0;
+	weston_desktop_xdg_popup_get_toplevel_coords(popup, popup->geometry.x,
+		popup->geometry.y, &toplevel_x, &toplevel_y);
+
+	if (slide_x && toplevel_x < toplevel_sx_box->x) {
+		popup->geometry.x += toplevel_sx_box->x - toplevel_x;
+	}
+	if (slide_y && toplevel_y < toplevel_sx_box->y) {
+		popup->geometry.y += toplevel_sx_box->y - toplevel_y;
+	}
+
+	weston_desktop_xdg_popup_get_constraints(popup, positioner, toplevel_sx_box,
+		&offset_x, &offset_y);
+
+	return !offset_x && !offset_y;
+}
+
+static bool weston_desktop_xdg_popup_unconstrain_resize(struct weston_desktop_xdg_popup *popup,
+		struct weston_desktop_xdg_positioner *positioner,
+		struct weston_geometry *toplevel_sx_box) {
+	int offset_x, offset_y;
+	weston_desktop_xdg_popup_get_constraints(popup, positioner, toplevel_sx_box,
+		&offset_x, &offset_y);
+
+	if (!offset_x && !offset_y) {
+		return true;
+	}
+
+	bool resize_x = offset_x &&
+		(positioner->constraint_adjustment &
+		 XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_RESIZE_X);
+
+	bool resize_y = offset_y &&
+		(positioner->constraint_adjustment &
+		 XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_RESIZE_Y);
+
+	if (resize_x) {
+		popup->geometry.width -= offset_x;
+	}
+	if (resize_y) {
+		popup->geometry.height -= offset_y;
+	}
+
+	weston_desktop_xdg_popup_get_constraints(popup, positioner, toplevel_sx_box,
+		&offset_x, &offset_y);
+
+	return !offset_x && !offset_y;
 }
 
 static void
@@ -1109,9 +1382,23 @@ weston_desktop_xdg_surface_protocol_get_popup(struct wl_client *wl_client,
 	popup->parent = parent;
 
 	popup->geometry =
-		weston_desktop_xdg_positioner_get_geometry(positioner,
-							   dsurface,
-							   parent_surface);
+		weston_desktop_xdg_positioner_get_geometry(positioner);
+
+	float view_x, view_y;
+	struct weston_view *view;
+	wl_list_for_each(view, &weston_desktop_surface_get_surface(parent_surface)->views, surface_link) { break; }
+	weston_view_to_global_float(view, 0, 0, &view_x, &view_y);
+	struct weston_output *output = weston_desktop_surface_get_surface(parent_surface)->output;
+	struct weston_geometry output_toplevel_sx_box = {
+		.x = output->x - view_x,
+		.y = output->y - view_y,
+		.width = output->width,
+		.height = output->height
+	};
+
+	weston_desktop_xdg_popup_unconstrain_flip(popup, positioner, &output_toplevel_sx_box)
+		|| weston_desktop_xdg_popup_unconstrain_slide(popup, positioner, &output_toplevel_sx_box)
+		|| weston_desktop_xdg_popup_unconstrain_resize(popup, positioner, &output_toplevel_sx_box);
 
 	weston_desktop_surface_set_relative_to(popup->base.desktop_surface,
 					       parent_surface,
