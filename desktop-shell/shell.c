@@ -142,6 +142,8 @@ struct shell_surface {
 	int focus_count;
 
 	bool destroying;
+
+	struct shell_surface *parent, *child;
 };
 
 struct shell_grab {
@@ -678,7 +680,7 @@ focus_state_surface_destroy(struct wl_listener *listener, void *data)
 		}
 		state->keyboard_focus = NULL;
 		activate(state->shell, next, state->seat,
-			 WESTON_ACTIVATE_FLAG_CONFIGURE);
+			 WESTON_ACTIVATE_FLAG_CONFIGURE | WESTON_ACTIVATE_FLAG_SKIP_CHILDREN);
 	} else {
 		if (state->shell->focus_animation_type == ANIMATION_DIM_LAYER) {
 			if (state->ws->focus_animation)
@@ -2376,6 +2378,8 @@ desktop_surface_added(struct weston_desktop_surface *desktop_surface,
 	shsurf->desktop_surface = desktop_surface;
 	shsurf->view = view;
 	shsurf->fullscreen.black_view = NULL;
+	shsurf->parent = NULL;
+	shsurf->child = NULL;
 	wl_list_init(&shsurf->fullscreen.transform.link);
 
 	shell_surface_set_output(
@@ -2410,6 +2414,11 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
 
 	if (shsurf->fullscreen.black_view)
 		weston_surface_destroy(shsurf->fullscreen.black_view->surface);
+
+	if (shsurf->parent)
+		shsurf->parent->child = NULL;
+	if (shsurf->child)
+		shsurf->child->parent = NULL;
 
 	weston_surface_set_label_func(surface, NULL);
 	weston_desktop_surface_set_user_data(shsurf->desktop_surface, NULL);
@@ -2619,6 +2628,24 @@ desktop_surface_committed(struct weston_desktop_surface *desktop_surface,
 		wl_list_for_each(view, &surface->views, surface_link)
 			weston_view_update_transform(view);
 	}
+}
+
+void
+desktop_surface_set_parent(struct weston_desktop_surface *desktop_surface,
+			   struct weston_desktop_surface *parent_desktop_surface,
+			   void *user_data)
+{
+	struct shell_surface *shsurf, *parent_shsurf;
+
+	if (!desktop_surface || !parent_desktop_surface) {
+		return;
+	}
+
+	shsurf = weston_desktop_surface_get_user_data(desktop_surface);
+	parent_shsurf = weston_desktop_surface_get_user_data(parent_desktop_surface);
+
+	shsurf->parent = parent_shsurf;
+	parent_shsurf->child = shsurf;
 }
 
 static void
@@ -2900,6 +2927,7 @@ static const struct weston_desktop_api shell_desktop_api = {
 	.surface_added = desktop_surface_added,
 	.surface_removed = desktop_surface_removed,
 	.committed = desktop_surface_committed,
+	.set_parent = desktop_surface_set_parent,
 	.move = desktop_surface_move,
 	.resize = desktop_surface_resize,
 	.fullscreen_requested = desktop_surface_fullscreen_requested,
@@ -3789,6 +3817,11 @@ activate(struct desktop_shell *shell, struct weston_view *view,
 	if (shell->focus_animation_type != ANIMATION_NONE) {
 		ws = get_current_workspace(shell);
 		animate_focus_change(shell, ws, get_default_view(old_es), get_default_view(es));
+	}
+
+	if (shsurf->child && !(flags & WESTON_ACTIVATE_FLAG_SKIP_CHILDREN)) {
+		activate(shell, shsurf->child->view, seat, flags);
+		return;
 	}
 }
 
